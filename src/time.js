@@ -6,8 +6,8 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const flipH = $('#flip-h'), flipM = $('#flip-m');
 for (const f of [flipH, flipM]) {
-  f.innerHTML = '<div class="half top"><span></span></div><div class="half bottom"><span></span></div>'
-    + '<div class="half top flap"><span></span></div><div class="half bottom flap"><span></span></div>';
+  f.innerHTML = ['half top', 'half bottom', 'half top flap', 'half bottom flap']
+    .map((cls) => `<div class="${cls}"><span></span><i class="shade"></i></div>`).join('');
   f._s = $$('span', f);
 }
 
@@ -31,6 +31,16 @@ addEventListener('resize', () => requestAnimationFrame(centerFlipDigits));
 on('view', (v) => { if (v === 'clock') requestAnimationFrame(centerFlipDigits); });
 document.fonts && document.fonts.ready.then(centerFlipDigits);
 
+// The soft clack of a card landing.
+function flipClick(at) {
+  const ac = audio(), t = ac.currentTime + at;
+  const buf = ac.createBuffer(1, ac.sampleRate * 0.04, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.12));
+  const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  src.buffer = buf; f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.8; g.gain.value = 0.25;
+  src.connect(f).connect(g).connect(ac.destination); src.start(t);
+}
+
 function setFlip(el, v) {
   if (el.dataset.v === v) return;
   const [top, bottom, flapTop, flapBottom] = el._s;
@@ -40,7 +50,8 @@ function setFlip(el, v) {
   clearTimeout(el._t);
   bottom.textContent = old; flapTop.textContent = old; top.textContent = v; flapBottom.textContent = v;
   el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
-  el._t = setTimeout(() => { bottom.textContent = v; flapTop.textContent = v; el.classList.remove('go'); }, 600);
+  if (settings.flipSound) { flipClick(0); flipClick(0.3); }
+  el._t = setTimeout(() => { bottom.textContent = v; flapTop.textContent = v; el.classList.remove('go'); }, 850);
 }
 
 function tickClock() {
@@ -75,6 +86,7 @@ function pomoToggle() {
     if (pomo.mode === 'focus' && pomo.left === pomo.dur) emit('pomo', 'start');
   }
   renderPomo();
+  savePomo(true);
 }
 function pomoAdvance(finished) {
   const wasFocus = pomo.mode === 'focus';
@@ -89,13 +101,33 @@ function pomoAdvance(finished) {
     if (settings.autoStart) { pomo.endAt = Date.now() + pomo.left; pomo.running = true; }
   }
   renderPomo();
+  savePomo(true);
 }
-function pomoReset() { pomoLogFocus(); pomoSet(pomo.mode); renderPomo(); }
+function pomoReset() { pomoLogFocus(); pomoSet(pomo.mode); renderPomo(); savePomo(true); }
+
+// The block in progress is saved every few seconds, so after a shutdown, crash or restart it comes
+// back paused where it was, with the minutes still counted.
+let pomoSavedAt = 0;
+function savePomo(force) {
+  const now = Date.now();
+  if (!force && now - pomoSavedAt < 5000) return;
+  pomoSavedAt = now;
+  const left = Math.max(0, pomo.running ? pomo.endAt - now : pomo.left);
+  store.set('pomoState', { mode: pomo.mode, dur: pomo.dur, left, round: pomo.round, task: $('#p-task').value });
+}
+function restorePomo() {
+  const s = store.get('pomoState', {});
+  if (!['focus', 'break'].includes(s.mode) || !(s.dur > 0) || !(s.left >= 0) || s.left > s.dur) return;
+  Object.assign(pomo, { mode: s.mode, dur: s.dur, left: s.left, round: Math.max(1, s.round | 0), running: false });
+  if (typeof s.task === 'string') $('#p-task').value = s.task.slice(0, 80);
+}
+addEventListener('beforeunload', () => savePomo(true));
+$('#p-task').addEventListener('change', () => savePomo(true));
 
 function tickPomo() {
   if (!pomo.running) return;
   pomo.left = pomo.endAt - Date.now();
-  if (pomo.left <= 0) pomoAdvance(true); else renderPomo();
+  if (pomo.left <= 0) pomoAdvance(true); else { renderPomo(); savePomo(); }
 }
 
 function renderPomo() {

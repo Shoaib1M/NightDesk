@@ -86,7 +86,7 @@ main { position: fixed; inset: 0; }
 /* ---------- clock */
 .clock { --cw: min(36vw, 56vh); display: flex; gap: calc(var(--cw) * .085); margin-bottom: 5vh; }
 .fcard { position: relative; width: var(--cw); height: calc(var(--cw) * 1.22); border-radius: calc(var(--cw) * .1); background: var(--card); border: 1px solid var(--line); overflow: hidden; }
-.flip { position: absolute; inset: 0; font-size: calc(var(--cw) * .64); font-weight: 600; letter-spacing: -.02em; line-height: 1; perspective: calc(var(--cw) * 3); font-variant-numeric: tabular-nums; }
+.flip { position: absolute; inset: 0; font-size: calc(var(--cw) * .64); font-weight: 600; letter-spacing: -.02em; line-height: 1; perspective: calc(var(--cw) * 4); font-variant-numeric: tabular-nums; }
 .flip::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--bg); z-index: 5; }
 .half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--card); }
 .half.top { top: 0; }
@@ -94,13 +94,29 @@ main { position: fixed; inset: 0; }
 .half span { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; padding-bottom: var(--flip-lift, .11em); box-sizing: border-box; }
 .half.top span { top: 0; }
 .half.bottom span { bottom: 0; }
-.flap { z-index: 3; backface-visibility: hidden; }
-.flap.top { transform-origin: bottom; }
-.flap.bottom { transform-origin: top; transform: rotateX(90deg); }
-.flip.go .flap.top { animation: flipTop .28s ease-in forwards; }
-.flip.go .flap.bottom { animation: flipBot .28s ease-out .28s forwards; }
-@keyframes flipTop { to { transform: rotateX(-90deg); } }
-@keyframes flipBot { to { transform: rotateX(0); } }
+/* light falling on the flaps: darkens as a flap turns away, lightens as it lands */
+.half .shade { position: absolute; inset: 0; background: rgba(0, 0, 0, .42); opacity: 0; pointer-events: none; }
+.flap { z-index: 3; backface-visibility: hidden; will-change: transform; }
+.flap.top { transform-origin: 50% 100%; }
+.flap.bottom { transform-origin: 50% 0; transform: rotateX(90deg); z-index: 4; }
+/* phase 1: the top half of the old number falls toward you; phase 2: the new bottom half swings down and settles */
+.flip.go .flap.top { animation: flipTop .3s cubic-bezier(.55, .06, .68, .19) forwards; }
+.flip.go .flap.bottom { animation: flipBot .5s linear .3s forwards; }
+.flip.go .flap.top .shade { animation: shadeIn .3s ease-in forwards; }
+.flip.go .flap.bottom .shade { opacity: 1; animation: shadeOut .35s ease-out .3s forwards; }
+.flip.go .half.top:not(.flap) .shade { opacity: .7; animation: shadeOut .3s ease-in forwards; }
+.flip.go .half.bottom:not(.flap) .shade { animation: shadeIn .3s ease-in forwards; }
+@keyframes flipTop { from { transform: rotateX(0); } to { transform: rotateX(-90deg); } }
+@keyframes flipBot {
+  0% { transform: rotateX(90deg); animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  55% { transform: rotateX(-10deg); animation-timing-function: ease-in-out; }
+  75% { transform: rotateX(4deg); animation-timing-function: ease-in-out; }
+  90% { transform: rotateX(-1deg); }
+  100% { transform: rotateX(0); }
+}
+@keyframes shadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shadeOut { to { opacity: 0; } }
+[data-theme=light] .half .shade { background: rgba(60, 48, 36, .14); }
 .lbl { position: absolute; z-index: 6; font-size: calc(var(--cw) * .062); color: var(--muted); font-weight: 300; }
 .lbl.tl { top: calc(var(--cw) * .085); left: calc(var(--cw) * .085); }
 .lbl.tr { top: calc(var(--cw) * .085); right: calc(var(--cw) * .085); }

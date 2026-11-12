@@ -3,6 +3,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 const inv = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 
 contextBridge.exposeInMainWorld('api', {
+  db: {
+    load: () => ipcRenderer.sendSync('db:load'),
+    set: (key, value) => ipcRenderer.send('db:set', key, value),
+    backup: inv('db:backup'),
+    folder: inv('db:folder'),
+  },
   app: {
     info: inv('app:info'),
     setLogin: inv('app:setLogin'),

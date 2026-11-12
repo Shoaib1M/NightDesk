@@ -25,11 +25,11 @@
   check('settings opens and closes on every view', () => { VIEWS.forEach(([v]) => { showView(v); openSettings(); closeSettings(); }); return $('#modal').hidden; });
 
   // ----- damaged saved data
-  check('non-array where a list is expected', () => { localStorage.setItem('nd.zz', '{"a":1}'); return store.get('zz', []).length === 0; });
-  check('garbage JSON', () => { localStorage.setItem('nd.zz', '{oops'); return store.get('zz', 5) === 5; });
-  check('wrong type', () => { localStorage.setItem('nd.zz', '"text"'); return store.get('zz', 0.6) === 0.6; });
-  check('null value', () => { localStorage.setItem('nd.zz', 'null'); return store.get('zz', 'x') === 'x'; });
-  localStorage.removeItem('nd.zz');
+  check('non-array where a list is expected', () => { store._putRaw('zz', '{"a":1}'); return store.get('zz', []).length === 0; });
+  check('garbage JSON', () => { store._putRaw('zz', '{oops'); return store.get('zz', 5) === 5; });
+  check('wrong type', () => { store._putRaw('zz', '"text"'); return store.get('zz', 0.6) === 0.6; });
+  check('null value', () => { store._putRaw('zz', 'null'); return store.get('zz', 'x') === 'x'; });
+  store._putRaw('zz', null);
 
   // ----- formatting
   check('fmtMs negative', () => fmtMs(-500) === '00:00');

@@ -56,6 +56,18 @@ function renderCal() {
   const st = $('#cal-status');
   st.className = 'status' + (cal.error ? ' err' : '');
   st.textContent = cal.error || (cal.connected ? `Google Calendar · synced ${cal.syncedAt ? fmtTime(cal.syncedAt) : ''}` : 'Saved on this PC · connect Google in Settings');
+  // If Google ever signs out, one click reconnects with the saved credentials (just approve in the browser).
+  let rc = $('#cal-reconnect');
+  if (cal.error && /expired|sign.?in/i.test(cal.error)) {
+    if (!rc) {
+      rc = h('button', { class: 'btn sm pri', id: 'cal-reconnect', onclick: async () => {
+        rc.disabled = true; rc.textContent = 'Approve in your browser…';
+        try { await call(api.gcal.connect({})); cal.error = ''; syncCalendar(); } catch (err) { toast(err.message); }
+        rc.disabled = false; rc.textContent = 'Reconnect';
+      } }, 'Reconnect');
+      st.after(rc);
+    }
+  } else if (rc) rc.remove();
   $('#cal-grid').replaceChildren(...[...Array(42)].map((_, i) => {
     const d = addDays(start, i), key = ymd(d), list = eventsOn(events, d);
     return h('button', {

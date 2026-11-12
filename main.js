@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const gcal = require('./gcal');
 const spotify = require('./spotify');
+const db = require('./db');
 
 // Keep Windows' taskbar shortcut tied to Nightdesk, rather than Electron's
 // runtime identity. This must happen before any windows are created.
@@ -113,11 +114,14 @@ async function shoot() {
   await wait(2500);
   if (process.env.NIGHTDESK_EVAL) {
     console.log('EVAL', await win.webContents.executeJavaScript(fs.readFileSync(process.env.NIGHTDESK_EVAL, 'utf8')));
+    // Tests only: die instantly, like ending the task in Task Manager, without any clean shutdown.
+    if (process.env.NIGHTDESK_HARDKILL) process.kill(process.pid, 'SIGKILL');
     return app.exit(0);
   }
   for (const step of steps) {
     await win.webContents.executeJavaScript(`window.__shot(${JSON.stringify(step)})`);
-    await wait(step.includes('ring') ? 3000 : 1000);
+    const dm = /(?:^|:)d(\d+)(?::|$)/.exec(step);
+    await wait(dm ? +dm[1] : step.includes('ring') ? 3000 : 1000);
     const target = step.includes('ring') && overlays[0] ? overlays[0] : step.includes('deskpet') && petWin ? petWin : win;
     let img = await target.webContents.capturePage();
     if (step.includes('real')) { // the real on-screen pixels, including compositor glitches capturePage cannot see
@@ -338,7 +342,22 @@ async function cfApi(method, query) {
   return json.result;
 }
 
+function registerDbIpc() {
+  // Loaded once, synchronously, when the page starts; every later change is written straight away.
+  ipcMain.on('db:load', (e) => {
+    try { e.returnValue = { ok: true, data: db.loadAll() }; }
+    catch (err) { console.error(err); e.returnValue = { ok: false, error: String(err.message || err) }; }
+  });
+  ipcMain.on('db:set', (e, key, value) => {
+    if (!win || e.sender !== win.webContents) return;
+    try { db.set(key, value); } catch (err) { console.error('db write failed', err); }
+  });
+  handle('db:backup', () => db.backupNow());
+  handle('db:folder', () => shell.openPath(db.folder()));
+}
+
 function registerIpc() {
+  registerDbIpc();
   handle('app:info', () => ({
     packaged: app.isPackaged,
     version: app.getVersion(),
@@ -443,10 +462,16 @@ function registerIpc() {
   handle('gcal:remove', (calendarId, id) => gcal.remove(calendarId, id));
 }
 
-if (!SHOTS && !app.requestSingleInstanceLock()) {
+if (process.argv.includes('--quit')) {
+  app.quit(); // asked to close a running copy; if this is the only one there is nothing to do
+} else if (!SHOTS && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', showWindow);
+  app.on('second-instance', (_e, argv) => {
+    if (argv.includes('--quit')) { quitting = true; app.quit(); return; }
+    showWindow();
+  });
+  app.on('will-quit', () => db.close());
   app.on('before-quit', () => { quitting = true; });
   app.on('window-all-closed', () => app.quit());
 

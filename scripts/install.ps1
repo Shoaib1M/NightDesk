@@ -7,8 +7,14 @@ $built = Join-Path $root 'release\Nightdesk-win32-x64'
 $dest = Join-Path $env:LOCALAPPDATA 'Programs\Nightdesk'
 $exe = Join-Path $dest 'Nightdesk.exe'
 
-Get-Process Nightdesk -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Seconds 2
+# Ask a running copy to quit cleanly (it saves and closes its database), and only force it after 15 s.
+$running = Get-Process Nightdesk -ErrorAction SilentlyContinue | Where-Object Path | Select-Object -First 1
+if ($running) {
+  Start-Process $running.Path -ArgumentList '--quit'
+  for ($i = 0; $i -lt 30 -and (Get-Process Nightdesk -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
+  Get-Process Nightdesk -ErrorAction SilentlyContinue | Stop-Process -Force
+  Start-Sleep -Seconds 1
+}
 
 Set-Location $root
 npm run build

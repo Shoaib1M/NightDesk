@@ -7,6 +7,7 @@ fillSubjects();
 resetEventForm();
 showView(settings.view === 'lamp' ? 'clock' : settings.view);
 tickClock();
+restorePomo();
 renderPomo();
 renderTimer();
 renderAlarms();

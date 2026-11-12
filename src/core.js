@@ -26,22 +26,56 @@ async function call(promise) {
   return r.data;
 }
 
-const store = {
-  get(key, fallback) {
+// All saved data lives in a local SQLite database (db.js in the main process). The whole table is
+// read once at start-up; every change is written to disk immediately. Browser storage is only used
+// if the database is unavailable, and anything still in it from older versions is moved across once.
+const store = (() => {
+  let cache = {}, persistent = false;
+  try {
+    const r = window.api && api.db.load();
+    if (r && r.ok) { cache = r.data; persistent = true; }
+  } catch {}
+  if (persistent && !cache.__migrated) {
     try {
-      const v = localStorage.getItem('nd.' + key);
-      if (v == null) return fallback;
-      const parsed = JSON.parse(v);
-      // Damaged or unexpected saved data must never break start-up: fall back instead.
-      if (parsed == null || Array.isArray(parsed) !== Array.isArray(fallback) || (fallback != null && typeof parsed !== typeof fallback)) return fallback;
-      return parsed;
-    } catch { return fallback; }
-  },
-  set(key, value) { try { localStorage.setItem('nd.' + key, JSON.stringify(value)); } catch {} },
-};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k.startsWith('nd.') || cache[k.slice(3)] != null) continue;
+        cache[k.slice(3)] = localStorage.getItem(k);
+        api.db.set(k.slice(3), cache[k.slice(3)]);
+      }
+    } catch {}
+    cache.__migrated = '1';
+    api.db.set('__migrated', '1');
+  }
+  const raw = (key) => (persistent ? cache[key] : (() => { try { return localStorage.getItem('nd.' + key); } catch { return null; } })());
+  return {
+    persistent,
+    get(key, fallback) {
+      try {
+        const v = raw(key);
+        if (v == null) return fallback;
+        const parsed = JSON.parse(v);
+        // Damaged or unexpected saved data must never break start-up: fall back instead.
+        if (parsed == null || Array.isArray(parsed) !== Array.isArray(fallback) || (fallback != null && typeof parsed !== typeof fallback)) return fallback;
+        return parsed;
+      } catch { return fallback; }
+    },
+    set(key, value) {
+      const s = JSON.stringify(value);
+      if (s === undefined) return;
+      if (persistent) {
+        if (cache[key] === s) return;
+        cache[key] = s;
+        api.db.set(key, s);
+      } else { try { localStorage.setItem('nd.' + key, s); } catch {} }
+    },
+    // Tests only: put a raw (possibly damaged) string in place of a saved value.
+    _putRaw(key, s) { if (persistent) cache[key] = s; else localStorage.setItem('nd.' + key, s); },
+  };
+})();
 
 const settings = Object.assign({
-  theme: 'dark', palette: 'rose', h24: false, seconds: true, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
+  theme: 'dark', palette: 'rose', h24: false, seconds: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
   cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
 }, store.get('settings', {}));
@@ -216,7 +250,8 @@ const GOOGLE_STEPS = [
   ['APIs & Services → Library → enable ', 'Google Calendar API', '.'],
   ['Google Auth Platform → set up the consent screen as ', 'External', ', then add your own Gmail under Audience → Test users.'],
   ['Clients → Create client → Application type ', 'Desktop app', '.'],
-  ['Paste the ', 'Client ID and Client secret', ' below and press Connect.'],
+  ['Audience → ', 'Publish app', '. Without this Google signs you out every 7 days; published, it stays connected for good. (When signing in, Google warns the app is unverified: choose Advanced → Go to the app. It is your own app.)'],
+  ['Paste the ', 'Client ID and Client secret', ' below and press Connect. They are saved, so you never type them again.'],
 ];
 const SPOTIFY_STEPS = [
   ['Open ', 'developer.spotify.com/dashboard', ' and create an app (Web API).'],
@@ -269,6 +304,7 @@ async function openSettings() {
     row('Colour', null, pal),
     row('24-hour clock', null, sw('h24')),
     row('Show seconds', null, sw('seconds')),
+    row('Flip sound', 'A soft click each time the clock flips', sw('flipSound')),
     row('Study pet', 'More options on the Pet tab', sw('buddy')),
     row('Quotes on the clock', 'Click the quote or use the arrow keys to cycle', sw('quotes')),
     row('Change quote every', 'minutes, 0 to change only by hand', num('quoteMin', 0, 120)),
@@ -301,6 +337,19 @@ async function openSettings() {
     h('h3', {}, 'Windows'),
     row('Open when Windows starts', info && !info.packaged ? 'Only available in the built app' : null, login),
     row('Keep running in the background when closed', 'Timers, alarms and sounds carry on. Quit from the tray icon', trayBox),
+  );
+
+  const dataNote = h('small', {}, store.persistent
+    ? 'Everything is saved instantly to a local database on this PC, with a daily backup kept for 14 days.'
+    : 'The database could not be opened, so data is being kept in browser storage for now.');
+  sheet.append(
+    h('h3', {}, 'Your data'),
+    h('div', { class: 'srow' }, h('span', {}, 'Saved on this PC', dataNote),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', onclick: () => api && api.db.folder() }, 'Open folder'),
+        h('button', { class: 'btn', onclick: async (e) => {
+          try { await call(api.db.backup()); e.target.textContent = 'Backed up'; } catch (err) { toast(err.message); }
+        } }, 'Back up now'))),
   );
 
   // Google Calendar
@@ -399,7 +448,8 @@ window.__shot = (step) => {
     else if (part === 'petkinds') { buddy.tab = 'kind'; }
     else if (part.startsWith('gh=')) { settings.ghUser = part.slice(3); }
     else if (part === 'bunny') { settings.palette = 'blue'; applyTheme(); pet.kind = 'bunny'; pet.color = 'snow'; pet.desktop = false; }
-    else if (/^(n|real)\d*$/.test(part)) { /* frame marker */ }
+    else if (/^(n|real|d)\d*$/.test(part)) { /* frame marker */ }
+    else if (part === 'flipnow') { for (const f of [flipH, flipM]) { const v = f.dataset.v; f.dataset.v = '88'; f._s.forEach((s) => { s.textContent = '88'; }); setFlip(f, v); } }
     else if (part === 'floor') { pet.pos = { x: 480, y: 16 }; placeBuddy(true); buddyTick(); }
     else if (part === 'nudge') { buddySay('It is 10:49 PM and nothing is logged yet. One focus block?', 20000); }
     else if (part === 'dragup') {

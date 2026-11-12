@@ -10,7 +10,7 @@ Everything runs and is stored locally. The only things that touch the internet a
 
 | | |
 |---|---|
-| **Clock** | Flip clock with date, weekday and seconds. Optional quote mode with a library that grows from the internet once a day. |
+| **Clock** | Split-flap clock that really flips (falling flap, bounce, shading, optional click sound) with date, weekday and seconds. Optional quote mode with a library that grows from the internet once a day. |
 | **Focus** | Split focus / break Pomodoro (50 / 10 by default, long break every 4 rounds). Pick a subject and the time is logged to it. |
 | **Timer / Stopwatch** | Countdown presets and custom times, laps. |
 | **Alarm** | One-off or repeating alarms. A ringing alarm freezes and blurs every monitor with **Snooze** and **Stop**, like a phone. |
@@ -78,9 +78,8 @@ Nothing here is required. Both are set up once in **Settings** (gear icon), and 
 2. **APIs & Services → Library** → enable **Google Calendar API**.
 3. **Google Auth Platform** → set up the consent screen as **External** and add your own Gmail under **Audience → Test users**.
 4. **Clients → Create client** → application type **Desktop app**.
-5. Paste the Client ID and Client secret into Settings and press **Connect**.
-
-While the consent screen is in *Testing*, Google signs you out after 7 days. Press **Publish app** on the consent screen to stop that.
+5. **Audience → Publish app.** In *Testing* mode Google signs you out every 7 days; published, the connection lasts. When you sign in, Google warns the app is unverified: choose **Advanced → Go to the app** (it is your own app).
+6. Paste the Client ID and Client secret into Settings and press **Connect**. They are saved, and if Google ever does sign you out, the Calendar tab shows a one-click **Reconnect**.
 
 ### Spotify (now playing and controls)
 
@@ -138,7 +137,9 @@ Sounds are generated with the Web Audio API and the pet is drawn pixel by pixel 
 
 ## Where your data lives
 
-Settings, alarms, subjects, the study log and the pet are kept in the app's local storage under `%APPDATA%\Nightdesk`. Google and Spotify tokens are in the same folder, encrypted with Windows' own credential protection. Nothing is sent anywhere else.
+Everything (subjects, study log, calendar, alarms, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, . Each change is written to disk the moment it happens (WAL journal, ), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything. A copy is saved every day to  and kept for 14 days; if the database is ever damaged it is restored from the newest copy automatically. **Settings → Your data** opens the folder or makes a backup on demand.
+
+Google and Spotify tokens sit next to it, encrypted with Windows' own credential protection. You enter them once; both renew themselves.
 
 ## Limits worth knowing
 
