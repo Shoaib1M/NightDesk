@@ -137,7 +137,7 @@ Sounds are generated with the Web Audio API and the pet is drawn pixel by pixel 
 
 ## Where your data lives
 
-Everything (subjects, study log, calendar, alarms, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, . Each change is written to disk the moment it happens (WAL journal, ), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything. A copy is saved every day to  and kept for 14 days; if the database is ever damaged it is restored from the newest copy automatically. **Settings → Your data** opens the folder or makes a backup on demand.
+Everything (subjects, study log, calendar, alarms, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%APPDATA%\Nightdesk\nightdesk.db`. Each change is written to disk the moment it happens (WAL journal, `synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything. A copy is saved every day to `backups/` and kept for 14 days; if the database is ever damaged it is restored from the newest copy automatically. **Settings → Your data** opens the folder or makes a backup on demand.
 
 Google and Spotify tokens sit next to it, encrypted with Windows' own credential protection. You enter them once; both renew themselves.
 
