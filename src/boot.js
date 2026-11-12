@@ -17,7 +17,6 @@ renderQuote();
 setInterval(() => { tickClock(); tickPomo(); tickTimer(); tickAlarms(); tickQuote(); }, 250);
 setInterval(buddyTick, 700);
 setInterval(() => {
- 
   contestReminders();
   if (settings.view === 'contests') renderContests();
   if (settings.view === 'alarm') renderAlarms();
@@ -28,3 +27,6 @@ setInterval(loadContests, 30 * 60000);
 syncCalendar();
 loadContests();
 loadCfUser();
+
+// After the laptop wakes up: ring anything that came due while it slept, and refresh online data.
+if (api) api.db.onResume(() => { tickAlarms(); syncCalendar(); loadContests(); });

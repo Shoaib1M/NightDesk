@@ -87,7 +87,7 @@ main { position: fixed; inset: 0; }
 .clock { --cw: min(36vw, 56vh); display: flex; gap: calc(var(--cw) * .085); margin-bottom: 5vh; }
 .fcard { position: relative; width: var(--cw); height: calc(var(--cw) * 1.22); border-radius: calc(var(--cw) * .1); background: var(--card); border: 1px solid var(--line); overflow: hidden; }
 .flip { position: absolute; inset: 0; font-size: calc(var(--cw) * .64); font-weight: 600; letter-spacing: -.02em; line-height: 1; perspective: calc(var(--cw) * 4); font-variant-numeric: tabular-nums; }
-.flip::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--bg); z-index: 5; }
+.flip::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: calc(var(--cw) * .014); margin-top: calc(var(--cw) * -.007); background: var(--bg); z-index: 5; }
 .half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--card); }
 .half.top { top: 0; }
 .half.bottom { bottom: 0; }

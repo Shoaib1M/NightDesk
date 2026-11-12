@@ -340,8 +340,9 @@ async function openSettings() {
   );
 
   const dataNote = h('small', {}, store.persistent
-    ? 'Everything is saved instantly to a local database on this PC, with a daily backup kept for 14 days.'
+    ? 'Everything is saved instantly to a local database on this PC. A backup is made every day and kept forever.'
     : 'The database could not be opened, so data is being kept in browser storage for now.');
+  if (api && store.persistent) call(api.db.backups()).then((n) => { dataNote.textContent += ` ${n} daily backup${n === 1 ? '' : 's'} saved so far.`; }).catch(() => {});
   sheet.append(
     h('h3', {}, 'Your data'),
     h('div', { class: 'srow' }, h('span', {}, 'Saved on this PC', dataNote),
@@ -351,6 +352,39 @@ async function openSettings() {
           try { await call(api.db.backup()); e.target.textContent = 'Backed up'; } catch (err) { toast(err.message); }
         } }, 'Back up now'))),
   );
+
+  if (api && store.persistent) {
+    // A second copy outside the app's folder, so the data survives the app folder being wiped.
+    const mirrorBox = h('input', { type: 'checkbox', class: 'sw' });
+    const mirrorNote = h('small', {}, 'Documents\\Nightdesk Backups. If Documents syncs to OneDrive, this is also an off-PC copy');
+    call(api.db.mirror()).then((m) => { mirrorBox.checked = m.on; if (m.folder) mirrorNote.title = m.folder; }).catch(() => {});
+    mirrorBox.addEventListener('change', async () => {
+      try { await call(api.db.mirror(mirrorBox.checked)); } catch (err) { mirrorBox.checked = !mirrorBox.checked; toast(err.message); }
+    });
+
+    // Roll everything back to any saved day. The current state is backed up first.
+    const pick = h('select', { 'aria-label': 'Backup to restore' }, h('option', { value: '' }, 'Loading…'));
+    call(api.db.list()).then((names) => {
+      pick.replaceChildren(...(names.length ? names : ['']).map((n) => {
+        const m = /(\d{4})-(\d{2})-(\d{2})/.exec(n);
+        return h('option', { value: n }, m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'No backups yet');
+      }));
+    }).catch(() => {});
+    const restoreBtn = h('button', { class: 'btn danger', onclick: async () => {
+      if (!pick.value) return;
+      const label = pick.selectedOptions[0].textContent;
+      if (!confirm(`Restore everything to how it was on ${label}?\n\nYour data as it is right now is backed up first, so this can be undone by restoring that copy.`)) return;
+      restoreBtn.disabled = true;
+      try { await call(api.db.restore(pick.value)); toast(`Restored ${label}.`); } catch (err) { toast(err.message); restoreBtn.disabled = false; }
+    } }, 'Restore');
+
+    sheet.append(
+      h('label', { class: 'srow' }, h('span', {}, 'Also keep a copy in Documents', mirrorNote), mirrorBox),
+      h('div', { class: 'srow' }, h('span', {}, 'Restore a day', h('small', {}, 'Undo mistakes by going back to any daily backup')),
+        h('div', { class: 'row' }, pick, restoreBtn)),
+      h('div', { class: 'row left' }, h('button', { class: 'btn sm', onclick: () => api.db.openMirror() }, 'Open Documents copy')),
+    );
+  }
 
   // Google Calendar
   const gStatus = h('small', {}, 'Checking…');
@@ -439,6 +473,7 @@ window.__shot = (step) => {
   for (const part of step.split(':')) {
     if (part === 'light' || part === 'dark') { settings.theme = part; applyTheme(); }
     else if (part === 'settings') openSettings();
+    else if (part === 'datasec') setTimeout(() => { const h3 = [...document.querySelectorAll('#sheet h3')].find((x) => x.textContent === 'Your data'); if (h3) h3.scrollIntoView(); }, 900);
     else if (part === 'sound') toggleSoundPop(true);
     else if (part === 'ring') ringAlarm({ label: 'Test alarm' });
     else if (part === 'demo') seedDemo();

@@ -94,6 +94,34 @@
   await api.alarm.hide(); ringStop(); ring.snoozes.length = 0; renderAlarms();
   check('nothing left ringing', () => !ring.alarm && !ring.timer);
 
+  // ----- alarms missed while the laptop slept
+  const agoHM = (msAgo) => { const d = new Date(Date.now() - msAgo); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const stopRing = async () => { await wait(300); await api.alarm.hide(); ringStop(); };
+  alarms.length = 0; ring.snoozes.length = 0;
+  setAlarmScan(Date.now() - 20 * 60000); // "slept" for 20 minutes
+  alarms.push({ id: 'm1', time: agoHM(10 * 60000), label: 'Wake up', days: [], on: true, last: '' });
+  tickAlarms();
+  check('alarm missed during sleep rings on wake', () => !!ring.alarm && /Wake up · missed at/.test(ring.alarm.label));
+  check('missed one-off alarm switches itself off', () => alarms[0].on === false);
+  await stopRing();
+  tickAlarms();
+  check('it does not ring twice', () => !ring.alarm);
+  alarms.length = 0;
+  setAlarmScan(Date.now() - 3 * 3600000); // slept three hours
+  alarms.push({ id: 'm2', time: agoHM(2 * 3600000), label: 'Too old', days: [], on: true, last: '' });
+  tickAlarms();
+  check('alarms more than an hour late are skipped', () => !ring.alarm);
+  alarms.length = 0;
+  setAlarmScan(Date.now() + 5 * 3600000); // the clock was moved back
+  alarms.push({ id: 'm3', time: agoHM(0), label: 'Now', days: [], on: true, last: '' });
+  tickAlarms();
+  check('alarm still rings after the clock goes back', () => !!ring.alarm && ring.alarm.label === 'Now');
+  await stopRing();
+  alarms.length = 0;
+  ring.snoozes.push({ at: Date.now() + 60000, label: 'Snoozed' }); saveSnoozes();
+  check('snoozes are saved', () => store.get('snoozes', []).some((s) => s.label === 'Snoozed'));
+  ring.snoozes.length = 0; saveSnoozes(); renderAlarms();
+
   // ----- calendar
   store.set('events', []);
   const at = (d, h, m = 0) => { const x = new Date(d); x.setHours(h, m, 0, 0); return x; };

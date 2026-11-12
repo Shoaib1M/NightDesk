@@ -222,7 +222,8 @@ on('space', (v) => {
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const alarms = store.get('alarms', []); // { id, time 'HH:MM', label, days [0-6], on, last }
-const ring = { alarm: null, timer: null, snoozes: [] };
+const ring = { alarm: null, timer: null, snoozes: store.get('snoozes', []).filter((s) => s && s.at > 0) };
+const saveSnoozes = () => store.set('snoozes', ring.snoozes);
 let formDays = [];
 
 function alarmNext(a, from = new Date()) {
@@ -281,25 +282,40 @@ if (api) api.alarm.onResult((action) => {
   ringStop();
   if (action === 'snooze' && a) {
     ring.snoozes.push({ at: Date.now() + settings.snoozeMin * 60000, label: a.label });
+    saveSnoozes();
     toast(`Snoozed for ${settings.snoozeMin} minutes`);
   }
   renderAlarms();
 });
 
+// Alarms are checked minute by minute from the last minute already checked, so an alarm that came
+// due while the laptop slept (or the app was closed) still rings when it wakes, up to an hour late.
+const ALARM_CATCHUP = 60 * 60000;
+let alarmScan = store.get('alarmScan', 0);
+function setAlarmScan(t) { if (t !== alarmScan) { alarmScan = t; store.set('alarmScan', t); } }
+
 function tickAlarms() {
   if (ring.alarm) return; // one at a time; anything due is picked up once this one is dealt with
-  const d = new Date();
-  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`, key = `${ymd(d)} ${hm}`;
-  for (const a of alarms) {
-    if (!a.on || a.time !== hm || a.last === key || (a.days.length && !a.days.includes(d.getDay()))) continue;
-    a.last = key;
-    if (!a.days.length) a.on = false;
-    renderAlarms();
-    ringAlarm(a);
-    return; // any other alarm due this minute rings once this one is stopped
+  const cur = new Date(); cur.setSeconds(0, 0);
+  const now = cur.getTime();
+  if (!(alarmScan > 0) || alarmScan > now) setAlarmScan(now - 60000); // first run, or the clock went back
+  // Always include the current minute: an alarm set or switched on during it must still ring
+  // (each alarm's `last` stamp stops it ringing twice for the same minute).
+  for (let t = Math.min(Math.max(alarmScan + 60000, now - ALARM_CATCHUP), now); t <= now; t += 60000) {
+    const d = new Date(t), hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`, key = `${ymd(d)} ${hm}`;
+    for (const a of alarms) {
+      if (!a.on || a.time !== hm || a.last === key || (a.days.length && !a.days.includes(d.getDay()))) continue;
+      a.last = key;
+      if (!a.days.length) a.on = false;
+      renderAlarms();
+      ringAlarm(t < now ? { ...a, label: `${a.label || 'Alarm'} · missed at ${fmtTime(d)}` } : a);
+      setAlarmScan(t - 60000); // look at this minute again: another alarm may share it
+      return;
+    }
   }
+  setAlarmScan(now);
   const due = ring.snoozes.findIndex((s) => s.at <= Date.now());
-  if (due >= 0) ringAlarm(ring.snoozes.splice(due, 1)[0]);
+  if (due >= 0) { const s = ring.snoozes.splice(due, 1)[0]; saveSnoozes(); ringAlarm(s); }
 }
 
 $('#al-days').append(...DAY_ORDER.map((d) => h('button', { type: 'button', title: DAYS[d], 'aria-label': DAYS[d], onclick: (e) => {

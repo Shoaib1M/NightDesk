@@ -137,14 +137,24 @@ Sounds are generated with the Web Audio API and the pet is drawn pixel by pixel 
 
 ## Where your data lives
 
-Everything (subjects, study log, calendar, alarms, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%APPDATA%\Nightdesk\nightdesk.db`. Each change is written to disk the moment it happens (WAL journal, `synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything. A copy is saved every day to `backups/` and kept for 14 days; if the database is ever damaged it is restored from the newest copy automatically. **Settings → Your data** opens the folder or makes a backup on demand.
+Everything (subjects, study log, calendar, alarms and snoozes, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%APPDATA%Nightdesk
+ightdesk.db`. Each change is written to disk the moment it happens (WAL journal, `synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything.
 
-Google and Spotify tokens sit next to it, encrypted with Windows' own credential protection. You enter them once; both renew themselves.
+**Backups, kept forever.** A copy is made every day (also while the app keeps running for days in the tray) into `backups/`, and a second copy goes to `DocumentsNightdesk Backups`. If Documents syncs to OneDrive, that copy also lives off the PC. Each copy is a few kilobytes, so years of them take almost no space.
+
+**Self-repair.** If the database is ever damaged, the newest good copy is restored on start. If the whole app data folder is wiped (or you set up a new PC), NightDesk finds the copies in Documents and brings everything back.
+
+**Undo.** Settings → Your data → *Restore a day* rolls everything back to any saved day; the state just before the restore is saved too, so a restore can itself be undone.
+
+Errors are written to `%APPDATA%Nightdesk
+ightdesk.log`, and a stray error never closes the app. Alarms that come due while the laptop sleeps ring when it wakes (up to an hour late, labelled "missed").
+
+Google and Spotify tokens sit next to the database, encrypted with Windows' own credential protection. You enter them once; both renew themselves.
 
 ## Limits worth knowing
 
 - Windows only (the installer script, start-with-Windows and the alarm overlay are written for it).
-- Alarms ring only while NightDesk is running, including in the tray. They do not wake a sleeping PC.
+- Alarms ring only while NightDesk is running, including in the tray. They do not wake a sleeping PC, but one missed during sleep rings as soon as it wakes (up to an hour late).
 - The leaderboard is personal: it ranks your own best days, not other people.
 
 ## License

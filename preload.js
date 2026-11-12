@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('api', {
     load: () => ipcRenderer.sendSync('db:load'),
     set: (key, value) => ipcRenderer.send('db:set', key, value),
     backup: inv('db:backup'),
+    backups: inv('db:backups'),
+    list: inv('db:list'),
+    restore: inv('db:restore'),
+    mirror: inv('db:mirror'),
+    openMirror: inv('db:openMirror'),
+    onResume: (cb) => ipcRenderer.on('app:resume', () => cb()),
     folder: inv('db:folder'),
   },
   app: {

@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, nativeTheme, powerSaveBlocker, net, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, nativeTheme, powerSaveBlocker, powerMonitor, net, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const gcal = require('./gcal');
@@ -24,7 +24,25 @@ let prefs = {};
 
 const prefsFile = () => path.join(app.getPath('userData'), 'prefs.json');
 function loadPrefs() { try { prefs = JSON.parse(fs.readFileSync(prefsFile(), 'utf8')); } catch { prefs = {}; } }
-function savePrefs() { try { fs.writeFileSync(prefsFile(), JSON.stringify(prefs)); } catch {} }
+// Written to a temporary file and swapped in, so a power cut mid-write can never corrupt it.
+function savePrefs() {
+  try { fs.writeFileSync(prefsFile() + '.tmp', JSON.stringify(prefs)); fs.renameSync(prefsFile() + '.tmp', prefsFile()); }
+  catch (err) { logError('prefs', err); }
+}
+
+// ---------- error log: %APPDATA%\Nightdesk\nightdesk.log, capped at 1 MB (the previous one is kept as .old)
+function logError(where, err) {
+  const line = `[${new Date().toISOString()}] ${where}: ${(err && err.stack) || err}\n`;
+  console.error(line.trim());
+  try {
+    const f = path.join(app.getPath('userData'), 'nightdesk.log');
+    try { if (fs.statSync(f).size > 1e6) fs.renameSync(f, f + '.old'); } catch {}
+    fs.appendFileSync(f, line);
+  } catch {}
+}
+// A stray error must never take the app (and its timers and alarms) down.
+process.on('uncaughtException', (err) => logError('uncaught', err));
+process.on('unhandledRejection', (err) => logError('unhandled promise', err));
 
 const closeToTray = () => prefs.closeToTray !== false; // on unless switched off in Settings
 
@@ -102,7 +120,7 @@ function createWindow() {
   win.on('show', applyAwake);
   win.on('hide', applyAwake);
   // If the page ever crashes or hangs, bring it back instead of leaving a dead window.
-  win.webContents.on('render-process-gone', () => { if (win && !win.isDestroyed()) win.reload(); });
+  win.webContents.on('render-process-gone', (_e, d) => { logError('page crashed', d && d.reason); if (win && !win.isDestroyed()) win.reload(); });
 
   if (SHOTS) win.webContents.once('did-finish-load', () => shoot().catch((err) => { console.error(err); app.exit(1); }));
 }
@@ -342,6 +360,11 @@ async function cfApi(method, query) {
   return json.result;
 }
 
+function applyMirror() {
+  const folder = SHOTS ? path.join(SHOTS, 'profile', 'mirror') : path.join(app.getPath('documents'), 'Nightdesk Backups');
+  db.setMirror(prefs.mirrorBackups === false ? null : folder);
+}
+
 function registerDbIpc() {
   // Loaded once, synchronously, when the page starts; every later change is written straight away.
   ipcMain.on('db:load', (e) => {
@@ -353,6 +376,18 @@ function registerDbIpc() {
     try { db.set(key, value); } catch (err) { console.error('db write failed', err); }
   });
   handle('db:backup', () => db.backupNow());
+  handle('db:backups', () => db.backupCount());
+  handle('db:list', () => db.backups());
+  handle('db:restore', async (name) => {
+    const r = db.restore(name);
+    setTimeout(() => { if (win && !win.isDestroyed()) win.reload(); }, 150); // reload the page onto the restored data
+    return r;
+  });
+  handle('db:mirror', (on) => {
+    if (typeof on === 'boolean') { prefs.mirrorBackups = on; savePrefs(); applyMirror(); if (on) db.backupNow(); }
+    return { on: prefs.mirrorBackups !== false, folder: db.mirrorFolder() };
+  });
+  handle('db:openMirror', () => db.mirrorFolder() && shell.openPath(db.mirrorFolder()));
   handle('db:folder', () => shell.openPath(db.folder()));
 }
 
@@ -477,9 +512,14 @@ if (process.argv.includes('--quit')) {
 
   app.whenReady().then(() => {
     loadPrefs();
+    applyMirror();
+    // After the PC wakes up: ring alarms that came due while it slept, refresh calendars.
+    powerMonitor.on('resume', () => { if (win && !win.isDestroyed()) win.webContents.send('app:resume'); });
     syncLoginItem();
     registerIpc();
     createWindow();
+    // A copy of the database every day, even if the app runs for days without restarting.
+    setInterval(() => db.backupIfDue(), 30 * 60000);
     if (!SHOTS) createTray();
   });
 }

@@ -32,8 +32,23 @@ for (const test of suites) {
     // Write data, kill the app with no clean shutdown, start again on the same profile and read it back.
     const w = launch('smoke-persist-write.js', { NIGHTDESK_HARDKILL: '1' });
     if (!(w.out.includes('"wrote":true') && w.out.includes('"persistent":true'))) { report(test + ' (write)', false, w.out); continue; }
+    // 30 old daily backups from last year: none of them may ever be deleted.
+    const bdir = path.join(shots, 'profile', 'backups');
+    fs.mkdirSync(bdir, { recursive: true });
+    for (let i = 1; i <= 30; i++) fs.copyFileSync(path.join(shots, 'profile', 'nightdesk.db'), path.join(bdir, `nightdesk-2025-01-${String(i).padStart(2, '0')}.db`));
     const r = launch('smoke-persist-read.js');
     report(test + ' (after a hard kill)', passed(r), r.out);
+    // Roll back to today's backup after changing something.
+    const rs = launch('smoke-persist-restore.js');
+    if (!rs.out.includes('"restoreOk":true')) { report(test + ' (restore)', false, rs.out); continue; }
+    const f1 = launch('smoke-persist-final.js');
+    const safety = fs.readdirSync(bdir).some((f) => f.startsWith('before-restore-'));
+    report(test + ' (restore a day)', passed(f1) && safety, safety ? f1.out : 'no before-restore safety copy\n' + f1.out);
+    // Wipe the app data folder completely, keeping only the Documents copy: everything must come back.
+    const prof = path.join(shots, 'profile');
+    for (const f of fs.readdirSync(prof)) if (f !== 'mirror') fs.rmSync(path.join(prof, f), { recursive: true, force: true });
+    const f2 = launch('smoke-persist-final.js');
+    report(test + ' (app data wiped, restored from Documents copy)', passed(f2), f2.out);
     continue;
   }
   const r = launch(test);
