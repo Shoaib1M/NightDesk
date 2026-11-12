@@ -16,7 +16,7 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Alarm** | One-off or repeating alarms. A ringing alarm freezes and blurs every monitor with **Snooze** and **Stop**, like a phone. |
 | **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, and side-by-side activity heatmaps for your study time, your GitHub contributions and your Codeforces submissions, plus a leaderboard of your best days. All on one screen. |
 | **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
-| **Calendar** | Month view with add, edit and delete. Local by default; two-way sync with Google Calendar once linked. |
+| **Calendar** | Month view with add, edit and delete. Double-click a day to fill it like a sticky note, or pick one of six pastel colours in the day panel; text stays readable on every colour. Local by default; two-way sync with Google Calendar once linked. |
 | **Contests** | Upcoming Codeforces rounds with division filters, add-to-calendar and a reminder 30 minutes before. |
 | **Lamp** | The whole window as one solid colour with presets, any custom colour and brightness. Made for using a second monitor as a light. |
 | **Sounds** | Nine synthesised sounds you can layer: white, pink, brown, study, rain, ocean, cabin, fireplace, binaural focus beats. Spotify now-playing and controls once linked. |

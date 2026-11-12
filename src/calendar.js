@@ -68,15 +68,20 @@ function renderCal() {
       st.after(rc);
     }
   } else if (rc) rc.remove();
+  const fills = dayFills();
   $('#cal-grid').replaceChildren(...[...Array(42)].map((_, i) => {
-    const d = addDays(start, i), key = ymd(d), list = eventsOn(events, d);
-    return h('button', {
-      class: 'day' + (d.getMonth() !== m.getMonth() ? ' out' : '') + (key === today ? ' today' : '') + (key === cal.sel ? ' sel' : ''),
-      onclick: () => { cal.sel = key; resetEventForm(); renderCal(); },
+    const d = addDays(start, i), key = ymd(d), list = eventsOn(events, d), fill = DAY_COLORS.find(([id]) => id === fills[key]);
+    const cell = h('button', {
+      class: 'day' + (d.getMonth() !== m.getMonth() ? ' out' : '') + (key === today ? ' today' : '') + (key === cal.sel ? ' sel' : '') + (fill ? ' filled' : ''),
+      title: fill ? `${fill[1]} · double-click to clear` : 'Double-click to fill',
+      onclick: () => dayClick(key),
     }, h('span', { class: 'dn' }, d.getDate()),
       list.slice(0, 3).map((e) => { const c = h('span', { class: 'chip' }, e.title); c.style.setProperty('--c', e.color); return c; }),
       list.length > 3 && h('span', { class: 'more' }, `+${list.length - 3} more`));
+    if (fill) cell.style.setProperty('--fill', fill[2]);
+    return cell;
   }));
+  renderDayColors(fills[cal.sel]);
 
   const day = parseYmd(cal.sel);
   $('#day-title').textContent = day.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -94,6 +99,38 @@ function renderCal() {
   }));
   if (!todays.length) $('#day-list').append(h('p', { class: 'empty' }, 'Nothing planned.'));
   $('#ev-hint').textContent = cal.connected ? 'New events are saved to your Google Calendar.' : 'New events are saved on this PC.';
+}
+
+// ---------- post-it day fills (saved on this PC)
+const DAY_COLORS = [
+  ['yellow', 'Lemon', '#fff3a3'], ['pink', 'Blush', '#ffd3e0'], ['peach', 'Peach', '#ffd9b3'],
+  ['mint', 'Mint', '#c9f2d0'], ['sky', 'Sky', '#cfe6ff'], ['lilac', 'Lilac', '#e4d9ff'],
+];
+const dayFills = () => store.get('dayFills', {});
+function setDayFill(key, id) {
+  const all = dayFills();
+  if (id) all[key] = id; else delete all[key];
+  store.set('dayFills', all);
+  renderCal();
+}
+// A second click on the same day within 400 ms counts as a double-click: fill it, or clear it.
+let lastDayClick = { key: '', at: 0 };
+function dayClick(key) {
+  const now = Date.now(), dbl = lastDayClick.key === key && now - lastDayClick.at < 400;
+  lastDayClick = dbl ? { key: '', at: 0 } : { key, at: now };
+  if (cal.sel !== key) { cal.sel = key; resetEventForm(); }
+  if (dbl) setDayFill(key, dayFills()[key] ? '' : DAY_COLORS[0][0]);
+  else renderCal();
+}
+function renderDayColors(current) {
+  const box = $('#day-colors');
+  box.replaceChildren(
+    ...DAY_COLORS.map(([id, label, color]) => {
+      const b = h('button', { class: 'fill-sw' + (current === id ? ' on' : ''), title: label, 'aria-label': `Fill with ${label}`, onclick: () => setDayFill(cal.sel, id) });
+      b.style.background = color;
+      return b;
+    }),
+    h('button', { class: 'fill-sw none' + (current ? '' : ' on'), title: 'No fill', 'aria-label': 'No fill', onclick: () => setDayFill(cal.sel, '') }));
 }
 
 function resetEventForm() {

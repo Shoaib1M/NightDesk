@@ -473,6 +473,7 @@ window.__shot = (step) => {
   for (const part of step.split(':')) {
     if (part === 'light' || part === 'dark') { settings.theme = part; applyTheme(); }
     else if (part === 'settings') openSettings();
+    else if (part === 'fills') { const t = new Date(); [['yellow', 0], ['pink', 2], ['mint', 3], ['sky', 6], ['lilac', 9], ['peach', 11], ['yellow', 13]].forEach(([c, n]) => { const all = dayFills(); all[ymd(addDays(t, n))] = c; store.set('dayFills', all); }); saveEvent({ title: 'Codeforces practice', allDay: true, start: ymd(t), end: ymd(addDays(t, 1)) }, null).then(renderCal); }
     else if (part === 'datasec') setTimeout(() => { const h3 = [...document.querySelectorAll('#sheet h3')].find((x) => x.textContent === 'Your data'); if (h3) h3.scrollIntoView(); }, 900);
     else if (part === 'sound') toggleSoundPop(true);
     else if (part === 'ring') ringAlarm({ label: 'Test alarm' });

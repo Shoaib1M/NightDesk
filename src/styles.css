@@ -247,6 +247,16 @@ main { position: fixed; inset: 0; }
 .day .chip { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 10px; position: relative; flex: none; }
 .day .chip::before { content: ""; position: absolute; left: 0; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--c, var(--accent)); }
 .day .more { font-size: 10px; color: var(--muted); }
+/* post-it fill: a pastel block with dark text in both themes, and a little folded corner */
+.day.filled { background: var(--fill); color: #2b2620; border-color: rgba(0, 0, 0, .08); position: relative; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+.day.filled::after { content: ""; position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; background: linear-gradient(135deg, var(--fill) 50%, rgba(0, 0, 0, .14) 50%); border-top-left-radius: 3px; }
+.day.filled .more { color: rgba(43, 38, 32, .6); }
+.day.filled.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 6px rgba(0, 0, 0, .18); }
+.day.filled:hover { border-color: rgba(0, 0, 0, .3); }
+.day-colors { display: flex; gap: 6px; align-items: center; }
+.fill-sw { width: 24px; height: 24px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, .15); cursor: pointer; padding: 0; }
+.fill-sw.on { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+.fill-sw.none { background: linear-gradient(135deg, transparent 45%, #e5484d 45%, #e5484d 55%, transparent 55%), var(--card2); border-color: var(--line); }
 .cal-side { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; margin-top: 46px; }
 .cal-side h2 { font-size: 16px; font-weight: 600; }
 .day-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
