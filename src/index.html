@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-palette="rose">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.scdn.co">
+<title>Nightdesk</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="top" class="chrome"></div>
+
+<main>
+  <section class="view" id="v-clock">
+    <div class="quote" id="quote" hidden>
+      <button class="ib chrome" id="q-prev" aria-label="Previous quote">&lsaquo;</button>
+      <p><span id="q-text"></span><small id="q-by"></small></p>
+      <button class="ib chrome" id="q-next" aria-label="Next quote">&rsaquo;</button>
+    </div>
+    <div class="clock">
+      <div class="fcard">
+        <div class="flip" id="flip-h"></div>
+        <span class="lbl tl" id="c-date"></span>
+        <span class="lbl bl" id="c-ampm"></span>
+      </div>
+      <div class="fcard">
+        <div class="flip" id="flip-m"></div>
+        <span class="lbl tr" id="c-day"></span>
+        <span class="lbl br" id="c-sec"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-focus">
+    <div class="pomo" id="pomo" data-mode="focus">
+      <div class="ppanel" data-p="focus">
+        <h2>FOCUS</h2>
+        <div class="ring">
+          <svg viewBox="0 0 200 200"><circle class="trk" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" transform="rotate(-90 100 100)"/></svg>
+          <svg class="ring-ic" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="32" y="36" width="56" height="38" rx="5" stroke-width="6"/><path d="M22 86h76" stroke-width="7"/>
+          </svg>
+        </div>
+        <div class="ptime" id="p-focus"></div>
+      </div>
+      <div class="ppanel" data-p="break">
+        <h2 id="p-break-title">BREAK</h2>
+        <div class="ring">
+          <svg viewBox="0 0 200 200"><circle class="trk" cx="100" cy="100" r="90"/><circle class="prog" cx="100" cy="100" r="90" transform="rotate(-90 100 100)"/></svg>
+          <svg class="ring-ic" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M30 52h48v16a24 24 0 0 1-48 0z" fill="currentColor" stroke-width="2"/>
+            <path d="M78 58h5a9 9 0 0 1 0 18h-7" stroke-width="5"/>
+            <path d="M30 100h50" stroke-width="5"/>
+            <path d="M44 42c-5-6 5-9 0-16M56 42c-5-6 5-9 0-16M68 42c-5-6 5-9 0-16" stroke-width="3.5"/>
+          </svg>
+        </div>
+        <div class="ptime" id="p-break"></div>
+      </div>
+    </div>
+    <div class="pctl chrome">
+      <div class="pill">
+        <select id="p-subj" aria-label="Subject"></select>
+        <input id="p-task" placeholder="What are you working on?" maxlength="80" spellcheck="false">
+        <button class="btn pri" id="p-go">Start</button>
+        <button class="btn" id="p-skip">Skip</button>
+        <button class="btn" id="p-reset">Reset</button>
+      </div>
+      <div class="pinfo" id="p-info"></div>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-timer">
+    <div class="center-col">
+      <div class="bigtime" id="t-time">25:00</div>
+      <div class="bar"><i id="t-bar"></i></div>
+      <div class="chips" id="t-chips"></div>
+      <div class="row">
+        <label class="fld">Min <input type="number" id="t-min" min="0" max="999" value="25"></label>
+        <label class="fld">Sec <input type="number" id="t-sec" min="0" max="59" value="0"></label>
+        <button class="btn" id="t-set">Set</button>
+      </div>
+      <div class="row">
+        <button class="btn pri big" id="t-go">Start</button>
+        <button class="btn big" id="t-reset">Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-stopwatch">
+    <div class="center-col">
+      <div class="bigtime" id="s-time">00:00.00</div>
+      <div class="row">
+        <button class="btn pri big" id="s-go">Start</button>
+        <button class="btn big" id="s-lap">Lap</button>
+        <button class="btn big" id="s-reset">Reset</button>
+      </div>
+      <ol class="laps" id="s-laps"></ol>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-alarm">
+    <div class="narrow">
+      <div class="cal-head">
+        <h1>Alarms</h1>
+        <span class="status" id="al-next"></span>
+        <div class="sp"></div>
+        <button class="btn" id="al-test">Test alarm</button>
+      </div>
+      <form class="card al-form" id="al-form">
+        <input type="time" id="al-time" required>
+        <input id="al-label" placeholder="Label (optional)" maxlength="60" spellcheck="false">
+        <div class="days" id="al-days"></div>
+        <button class="btn pri" type="submit">Add alarm</button>
+      </form>
+      <div class="al-list" id="al-list"></div>
+      <p class="hint">Alarms ring while Nightdesk is running, including when it is closed to the tray. A ringing alarm blurs every screen until you stop or snooze it.</p>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-study">
+    <div class="study">
+      <div class="study-left">
+        <div class="cal-head"><h1>Subjects</h1><span class="status">daily targets</span></div>
+        <div class="subj-list" id="subj-list"></div>
+        <form class="row left" id="subj-form">
+          <input id="subj-name" placeholder="Add a subject" maxlength="40" required spellcheck="false">
+          <button class="btn pri" type="submit">Add</button>
+        </form>
+      </div>
+      <div class="study-right" id="stats"></div>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-pet">
+    <div class="petv">
+      <div class="card pet-left">
+        <input id="pet-name" maxlength="16" spellcheck="false" aria-label="Pet name">
+        <div class="status" id="pet-stage"></div>
+        <div class="pet-stage"><canvas id="pet-big" width="16" height="18"></canvas></div>
+        <div class="pet-mood" id="pet-mood"></div>
+        <div class="pbars" id="pet-bars"></div>
+        <div class="row" id="pet-acts"></div>
+        <p class="hint">Studying feeds your pet and earns 1 coin a minute. It gets sad if ignored, but never leaves.</p>
+      </div>
+      <div class="pet-right">
+        <div class="card"><h3>Daily quests <small>new every day</small><span class="sp"></span><b class="coins" id="pet-coins"></b></h3><div id="pet-quests"></div></div>
+        <div class="card"><h3>Shop</h3><div class="chips left" id="shop-tabs"></div><div class="shop" id="shop"></div></div>
+        <div class="card"><h3>Behaviour</h3><div id="pet-opts"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-calendar">
+    <div class="cal">
+      <div class="cal-main">
+        <div class="cal-head">
+          <h1 id="cal-title"></h1>
+          <span class="status" id="cal-status"></span>
+          <div class="sp"></div>
+          <button class="btn" id="cal-prev" aria-label="Previous month">&lsaquo;</button>
+          <button class="btn" id="cal-today">Today</button>
+          <button class="btn" id="cal-next" aria-label="Next month">&rsaquo;</button>
+          <button class="btn" id="cal-sync">Sync</button>
+        </div>
+        <div class="cal-dow" id="cal-dow"></div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <aside class="cal-side">
+        <h2 id="day-title"></h2>
+        <div class="day-list" id="day-list"></div>
+        <form class="ev-form" id="ev-form">
+          <h3 id="ev-form-title">New event</h3>
+          <input id="ev-title" placeholder="Title" required maxlength="200" spellcheck="false">
+          <label class="chk"><input type="checkbox" id="ev-allday"> All day</label>
+          <div class="row left" id="ev-times"><input type="time" id="ev-start"><span>to</span><input type="time" id="ev-end"></div>
+          <div class="row left">
+            <button class="btn pri" type="submit" id="ev-save">Add</button>
+            <button class="btn" type="button" id="ev-cancel" hidden>Cancel</button>
+          </div>
+          <p class="hint" id="ev-hint"></p>
+        </form>
+      </aside>
+    </div>
+  </section>
+
+  <section class="view pad" id="v-contests">
+    <div class="narrow wide">
+      <div class="cal-head">
+        <h1>Codeforces</h1>
+        <span class="status" id="cf-status"></span>
+        <div class="sp"></div>
+        <div class="cf-user" id="cf-user"></div>
+        <button class="btn" id="cf-refresh">Refresh</button>
+      </div>
+      <div class="chips left" id="cf-filters"></div>
+      <div class="cf-list" id="cf-list"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-lamp">
+    <div class="lamp-ctl chrome" id="lamp-ctl"></div>
+  </section>
+</main>
+
+<div id="buddy" hidden>
+  <div class="bubble" id="buddy-say" hidden></div>
+  <span class="zz">z</span>
+  <div class="flipper"><canvas id="buddy-cv" width="16" height="18" title="Drag me, click me, double-click for a trick"></canvas></div>
+</div>
+
+<nav id="dock" class="chrome"></nav>
+<div id="sound-pop" class="pop" hidden></div>
+<div id="modal" class="modal" hidden><div class="sheet" id="sheet"></div></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="core.js"></script>
+<script src="sound.js"></script>
+<script src="study.js"></script>
+<script src="time.js"></script>
+<script src="calendar.js"></script>
+<script src="lamp.js"></script>
+<script src="quotes.js"></script>
+<script src="pet-sprite.js"></script>
+<script src="pet.js"></script>
+<script src="boot.js"></script>
+</body>
+</html>

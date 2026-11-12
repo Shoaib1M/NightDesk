@@ -1,0 +1,53 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+const inv = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
+
+contextBridge.exposeInMainWorld('api', {
+  app: {
+    info: inv('app:info'),
+    setLogin: inv('app:setLogin'),
+    setCloseToTray: inv('app:setCloseToTray'),
+    fullscreen: inv('app:fullscreen'),
+    setTheme: inv('app:theme'),
+    keepAwake: inv('app:keepAwake'),
+    open: inv('app:open'),
+  },
+  alarm: {
+    show: inv('alarm:show'),
+    hide: inv('alarm:hide'),
+    data: inv('alarm:data'),
+    action: inv('alarm:action'),
+    onResult: (cb) => ipcRenderer.on('alarm:result', (_e, action) => cb(action)),
+  },
+  quotes: { fetch: inv('quotes:fetch') },
+  pet: {
+    desktop: inv('pet:desktop'),
+    state: (s) => ipcRenderer.send('pet:state', s),
+    onState: (cb) => ipcRenderer.on('pet:state', (_e, s) => cb(s)),
+    onOpen: (cb) => ipcRenderer.on('pet:open', () => cb()),
+    dragStart: () => ipcRenderer.send('pet:dragStart'),
+    drag: (dx, dy) => ipcRenderer.send('pet:drag', dx, dy),
+    dragEnd: () => ipcRenderer.send('pet:dragEnd'),
+    click: () => ipcRenderer.send('pet:click'),
+  },
+  cf: {
+    contests: inv('cf:contests'),
+    user: inv('cf:user'),
+  },
+  gcal: {
+    status: inv('gcal:status'),
+    connect: inv('gcal:connect'),
+    disconnect: inv('gcal:disconnect'),
+    list: inv('gcal:list'),
+    create: inv('gcal:create'),
+    update: inv('gcal:update'),
+    remove: inv('gcal:remove'),
+  },
+  spotify: {
+    status: inv('spotify:status'),
+    connect: inv('spotify:connect'),
+    disconnect: inv('spotify:disconnect'),
+    now: inv('spotify:now'),
+    control: inv('spotify:control'),
+  },
+});

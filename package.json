@@ -1,0 +1,18 @@
+{
+  "name": "nightdesk",
+  "productName": "Nightdesk",
+  "version": "1.0.0",
+  "description": "Clock, focus timer, calendar, contests and lamp for late-night study",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "icon": "node scripts/make-icon.js",
+    "build": "node scripts/make-icon.js && electron-packager . Nightdesk --platform=win32 --arch=x64 --out=release --overwrite --icon=build/icon.ico --ignore=\"^/(dist|release|scripts|shots|temp)\"",
+    "test": "node scripts/run-tests.js",
+    "install-app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.3.1"
+  }
+}
