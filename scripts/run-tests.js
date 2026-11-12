@@ -8,7 +8,9 @@ const shots = path.join(root, 'shots');
 const electron = require('electron');
 let failed = false;
 
-for (const test of ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js']) {
+const only = process.argv[2];
+for (const test of ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js']) {
+  if (only && test !== only) continue;
   fs.rmSync(path.join(shots, 'profile'), { recursive: true, force: true });
   const run = spawnSync(electron, ['.'], {
     cwd: root, encoding: 'utf8', timeout: 180000,

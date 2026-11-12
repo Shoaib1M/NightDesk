@@ -14,8 +14,8 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Focus** | Split focus / break Pomodoro (50 / 10 by default, long break every 4 rounds). Pick a subject and the time is logged to it. |
 | **Timer / Stopwatch** | Countdown presets and custom times, laps. |
 | **Alarm** | One-off or repeating alarms. A ringing alarm freezes and blurs every monitor with **Snooze** and **Stop**, like a phone. |
-| **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, a consistency heatmap and a leaderboard of your best days. |
-| **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows. |
+| **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, and side-by-side activity heatmaps for your study time, your GitHub contributions and your Codeforces submissions, plus a leaderboard of your best days. All on one screen. |
+| **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
 | **Calendar** | Month view with add, edit and delete. Local by default; two-way sync with Google Calendar once linked. |
 | **Contests** | Upcoming Codeforces rounds with division filters, add-to-calendar and a reminder 30 minutes before. |
 | **Lamp** | The whole window as one solid colour with presets, any custom colour and brightness. Made for using a second monitor as a light. |
@@ -64,6 +64,10 @@ This builds `Nightdesk.exe`, copies it to `%LOCALAPPDATA%\Programs\Nightdesk`, c
 
 Run the same command again after changing the code to update the installed copy.
 
+## GitHub and Codeforces heatmaps
+
+Type your GitHub username and Codeforces handle into the boxes on the Study tab (or in Settings). No sign-in or key is needed: NightDesk reads your public GitHub contribution calendar and your public Codeforces submissions, refreshes them every few hours, and keeps the last copy so the heatmaps still show offline.
+
 ## Optional accounts
 
 Nothing here is required. Both are set up once in **Settings** (gear icon), and the credentials are stored encrypted on your PC, never in this repository.
@@ -103,7 +107,7 @@ Playback controls need Spotify Premium.
 npm test
 ```
 
-Runs the checks in `scripts/smoke*.js` inside the real app window on a throwaway profile: timers, alarms and snooze, calendar edge cases, study statistics, quotes, damaged saved data, and the whole pet system.
+Runs the checks in `scripts/smoke*.js` inside the real app window on a throwaway profile: timers, alarms and snooze, calendar edge cases, study statistics, quotes, damaged saved data, the whole pet system, the desktop pet on every connected monitor, and the GitHub / Codeforces heatmaps. Some checks need an internet connection. Run one suite with `node scripts/run-tests.js smoke-pet.js`.
 
 ## How it is built
 
@@ -141,3 +145,7 @@ Settings, alarms, subjects, the study log and the pet are kept in the app's loca
 - Windows only (the installer script, start-with-Windows and the alarm overlay are written for it).
 - Alarms ring only while NightDesk is running, including in the tray. They do not wake a sleeping PC.
 - The leaderboard is personal: it ranks your own best days, not other people.
+
+## License
+
+[MIT](LICENSE)

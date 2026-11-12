@@ -1,34 +1,39 @@
 'use strict';
 // The desktop pet window: draws whatever state the main Nightdesk window sends, and can be dragged.
+// The drag itself is done by the main process (it follows the real cursor), so it works on any
+// monitor and scaling; this page only says when a drag starts and ends.
 const cv = document.getElementById('cv'), say = document.getElementById('say');
-let st = null, blink = false, drag = null;
+let st = null, blink = false, drag = null, walk = { on: false, flip: false };
 
 function paint() {
   if (!st) return;
   cv.style.width = PET_W * st.scale + 'px';
   cv.style.height = PET_H * st.scale + 'px';
-  document.body.className = st.cls;
+  document.body.className = [st.cls, walk.on ? 'walking' : '', walk.flip ? 'flip' : ''].join(' ');
   drawPet(cv.getContext('2d'), st.look, { closed: st.closed || blink, sad: st.sad });
   say.hidden = !st.bubble;
   say.textContent = st.bubble || '';
 }
 window.api.pet.onState((s) => { st = s; paint(); });
+window.api.pet.onWalk((w) => { walk = { on: !!w.on, flip: w.on ? !!w.flip : walk.flip }; paint(); });
 setInterval(() => { blink = !blink && Math.random() < 0.06; paint(); }, 700);
 
+function endDrag(click) {
+  const d = drag; drag = null;
+  if (!d) return;
+  window.api.pet.dragEnd();
+  if (click && !d.moved) window.api.pet.click();
+}
 cv.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
   drag = { x: e.screenX, y: e.screenY, moved: false };
-  cv.setPointerCapture(e.pointerId);
+  try { cv.setPointerCapture(e.pointerId); } catch {}
   window.api.pet.dragStart();
 });
 cv.addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  const dx = e.screenX - drag.x, dy = e.screenY - drag.y;
-  if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true;
-  if (drag.moved) window.api.pet.drag(dx, dy);
+  if (drag && Math.abs(e.screenX - drag.x) + Math.abs(e.screenY - drag.y) > 5) drag.moved = true;
 });
-cv.addEventListener('pointerup', () => {
-  const d = drag; drag = null;
-  if (!d) return;
-  if (d.moved) window.api.pet.dragEnd(); else window.api.pet.click();
-});
-cv.addEventListener('pointercancel', () => { drag = null; });
+cv.addEventListener('pointerup', () => endDrag(true));
+cv.addEventListener('pointercancel', () => endDrag(false));
+cv.addEventListener('lostpointercapture', () => endDrag(false));
+addEventListener('blur', () => endDrag(false));

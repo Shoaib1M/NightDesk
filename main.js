@@ -170,7 +170,6 @@ async function showAlarm(data) {
 // ---------- desktop pet: a small transparent always-on-top window that mirrors the in-app pet
 let petWin = null;
 let lastPetState = null;
-let petDragFrom = null;
 const PET_SIZE = { width: 260, height: 260 };
 
 function petStartPosition() {
@@ -185,7 +184,7 @@ function petStartPosition() {
 }
 
 function setDesktopPet(on) {
-  if (!on) { if (petWin && !petWin.isDestroyed()) petWin.destroy(); petWin = null; return false; }
+  if (!on) { stopPetWalk(); stopPetDrag(); if (petWin && !petWin.isDestroyed()) petWin.destroy(); petWin = null; return false; }
   if (petWin && !petWin.isDestroyed()) return true;
   petWin = new BrowserWindow({
     ...PET_SIZE, ...petStartPosition(),
@@ -201,31 +200,101 @@ function setDesktopPet(on) {
     petWin.showInactive();
   });
   petWin.on('closed', () => { petWin = null; });
+  petWin.once('show', () => movePet(...petWin.getPosition()));
+  // Catch any rescale Windows applies on its own (for example after a display change).
+  petWin.on('resize', () => {
+    const g = petWin.getBounds();
+    if (g.width !== PET_SIZE.width || g.height !== PET_SIZE.height) setImmediate(() => movePet(g.x, g.y));
+  });
   return true;
 }
 
+// Dragging follows the real cursor position, read here in the main process. That keeps it working
+// across monitors with different scaling, where positions reported by the page are unreliable.
+let petDragTimer = null;
+let petWalkTimer = null;
+let petWalks = 0; // walk requests, for tests
+const petAlive = () => petWin && !petWin.isDestroyed();
+
+// Monitors with different scaling make Windows resize the window as it crosses between them,
+// so every move sets the full bounds and snaps the size back if it was changed.
+function movePet(x, y) {
+  if (!petAlive()) return;
+  const want = { x: Math.round(x), y: Math.round(y), ...PET_SIZE };
+  petWin.setBounds(want);
+  const got = petWin.getBounds();
+  if (got.width !== PET_SIZE.width || got.height !== PET_SIZE.height) petWin.setBounds(want);
+}
+function savePetPos() {
+  if (!petAlive()) return;
+  const [x, y] = petWin.getPosition();
+  prefs.petPos = { x, y }; savePrefs();
+}
+function stopPetWalk() {
+  if (!petWalkTimer) return;
+  clearInterval(petWalkTimer); petWalkTimer = null;
+  if (petAlive()) petWin.webContents.send('pet:walk', { on: false });
+  savePetPos();
+}
+function stopPetDrag() {
+  if (!petDragTimer) return;
+  clearInterval(petDragTimer); petDragTimer = null;
+  savePetPos();
+}
+function startPetDrag() {
+  stopPetWalk(); stopPetDrag();
+  const cursor = screen.getCursorScreenPoint(), [x, y] = petWin.getPosition();
+  const off = { x: cursor.x - x, y: cursor.y - y }, started = Date.now();
+  petDragTimer = setInterval(() => {
+    if (!petAlive() || Date.now() - started > 120000) return stopPetDrag();
+    const p = screen.getCursorScreenPoint();
+    movePet(p.x - off.x, p.y - off.y);
+  }, 16);
+}
+// Walk along whichever monitor the pet is on. `fraction` is how far across that monitor to go.
+function startPetWalk(fraction) {
+  if (!petAlive() || petDragTimer) return;
+  stopPetWalk();
+  const area = screen.getDisplayMatching(petWin.getBounds()).workArea;
+  const target = Math.round(area.x + Math.max(0, Math.min(1, fraction)) * Math.max(0, area.width - 150));
+  const dir = target > petWin.getBounds().x ? 1 : -1;
+  petWin.webContents.send('pet:walk', { on: true, flip: dir < 0 });
+  petWalkTimer = setInterval(() => {
+    if (!petAlive()) { clearInterval(petWalkTimer); petWalkTimer = null; return; }
+    const [cx, cy] = petWin.getPosition(), nx = cx + dir * 3;
+    if ((dir > 0 && nx >= target) || (dir < 0 && nx <= target)) return stopPetWalk();
+    movePet(nx, cy);
+  }, 33);
+}
+
 function registerPetIpc() {
-  const fromPet = (e) => petWin && !petWin.isDestroyed() && e.sender === petWin.webContents;
+  const fromPet = (e) => petAlive() && (e.sender === petWin.webContents || !!SHOTS);
+  const fromApp = (e) => win && e.sender === win.webContents;
   ipcMain.on('pet:state', (e, s) => {
-    if (!win || e.sender !== win.webContents) return;
+    if (!fromApp(e)) return;
     lastPetState = s;
-    if (petWin && !petWin.isDestroyed()) petWin.webContents.send('pet:state', s);
+    if (petAlive()) petWin.webContents.send('pet:state', s);
   });
-  ipcMain.on('pet:dragStart', (e) => { if (fromPet(e)) petDragFrom = petWin.getPosition(); });
-  ipcMain.on('pet:drag', (e, dx, dy) => {
-    if (!fromPet(e) || !petDragFrom || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
-    petWin.setBounds({ x: Math.round(petDragFrom[0] + dx), y: Math.round(petDragFrom[1] + dy), ...PET_SIZE });
-  });
-  ipcMain.on('pet:dragEnd', (e) => {
-    if (!fromPet(e)) return;
-    const [x, y] = petWin.getPosition();
-    prefs.petPos = { x, y }; savePrefs(); petDragFrom = null;
-  });
+  ipcMain.on('pet:walk', (e, fraction) => { if (fromApp(e) && Number.isFinite(fraction)) { petWalks++; startPetWalk(fraction); } });
+  ipcMain.on('pet:dragStart', (e) => { if (fromPet(e)) startPetDrag(); });
+  ipcMain.on('pet:dragEnd', (e) => { if (fromPet(e)) stopPetDrag(); });
   ipcMain.on('pet:click', (e) => {
     if (!fromPet(e)) return;
     showWindow();
     if (win) win.webContents.send('pet:open');
   });
+  // Dev only (screenshot / test mode): read and place the pet window.
+  if (SHOTS) {
+    handle('pet:test', (cmd, arg) => {
+      if (!petAlive()) return null;
+      const displays = screen.getAllDisplays();
+      if (cmd === 'place') { const a = displays[Math.min(arg, displays.length - 1)].workArea; movePet(a.x + 40, a.y + a.height - PET_SIZE.height); }
+      if (cmd === 'dragStart') startPetDrag();
+      if (cmd === 'dragEnd') stopPetDrag();
+      const b = petWin.getBounds(), d = screen.getDisplayMatching(b);
+      return { bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null };
+    });
+  }
 }
 
 function showWindow() {
@@ -298,6 +367,34 @@ function registerIpc() {
     if (!/^[\w.-]{1,40}$/.test(String(handleName))) throw new Error('That does not look like a Codeforces handle.');
     const [u] = await cfApi('user.info', { handles: handleName });
     return { handle: u.handle, rating: u.rating || 0, maxRating: u.maxRating || 0, rank: u.rank || 'unrated' };
+  });
+
+  // Public activity calendars for the Study tab. No keys; only the username/handle is sent.
+  handle('gh:contrib', async (user) => {
+    if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(String(user))) throw new Error('That does not look like a GitHub username.');
+    const res = await net.fetch(`https://github.com/users/${encodeURIComponent(user)}/contributions`, { headers: { 'User-Agent': 'Mozilla/5.0 Nightdesk' } });
+    if (res.status === 404) throw new Error(`GitHub user "${user}" not found.`);
+    if (!res.ok) throw new Error(`GitHub is not responding (${res.status}).`);
+    const html = await res.text();
+    const counts = {};
+    for (const m of html.matchAll(/<tool-tip[^>]*\bfor="([^"]+)"[^>]*>([^<]*)<\/tool-tip>/g)) {
+      const n = /^(\d+) contribution/.exec(m[2].trim());
+      counts[m[1]] = n ? +n[1] : 0;
+    }
+    const days = {};
+    for (const m of html.matchAll(/<td\b[^>]*>/g)) {
+      const date = /data-date="(\d{4}-\d{2}-\d{2})"/.exec(m[0]), id = /\bid="([^"]+)"/.exec(m[0]), lvl = /data-level="(\d)"/.exec(m[0]);
+      if (!date) continue;
+      const c = id && counts[id[1]] != null ? counts[id[1]] : lvl ? +lvl[1] : 0;
+      if (c) days[date[1]] = c;
+    }
+    if (!html.includes('data-date=')) throw new Error('Could not read the GitHub calendar.');
+    return days;
+  });
+  handle('cf:activity', async (handleName) => {
+    if (!/^[\w.-]{1,40}$/.test(String(handleName))) throw new Error('That does not look like a Codeforces handle.');
+    const subs = await cfApi('user.status', { handle: handleName, from: 1, count: 10000 });
+    return subs.map((s) => [s.creationTimeSeconds, s.verdict === 'OK' ? 1 : 0]);
   });
 
   // Fresh quotes from free public sources (no key, nothing about the user is sent).

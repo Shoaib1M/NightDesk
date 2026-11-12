@@ -108,30 +108,115 @@ function renderStudy() {
     return h('div', { class: 'col' + (k === tk ? ' today' : '') }, stack, h('span', {}, d.getDate()));
   }));
 
-  const start = addDays(new Date(), -((new Date().getDay() + 6) % 7) - 7 * 17);
-  const heat = h('div', { class: 'heat' }, [...Array(18 * 7)].map((_, i) => {
-    const d = addDays(start, i), m = st.byDay.get(ymd(d)) || 0;
-    const cell = h('i', { class: d > new Date() ? 'f' : '', title: `${d.toLocaleDateString('en', { day: 'numeric', month: 'short' })}: ${fmtDur(m)}` });
-    if (m) cell.style.background = `color-mix(in srgb, var(--accent) ${Math.min(100, 25 + (m / 240) * 75)}%, var(--line))`;
-    return cell;
-  }));
-
   const rank = (rows) => h('div', { class: 'rank' }, rows.length ? rows.map(([label, m, color], i) => {
     const w = h('span', { class: 'w' }, label);
     if (color) w.style.color = color;
     return h('div', {}, h('span', { class: 'n' + (i === 0 ? ' g' : '') }, i + 1), w, h('b', {}, fmtDur(m)));
   }) : h('p', { class: 'empty' }, 'Finish a focus block to get on the board.'));
-  const bestDays = [...st.byDay].sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const bestDays = [...st.byDay].sort((a, b) => b[1] - a[1]).slice(0, 3)
     .map(([k, m]) => [parseYmd(k).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), m]);
-  const topSubj = [...st.bySubj].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, m]) => [subjName(id), m, subjColor(id)]);
+  const topSubj = [...st.bySubj].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, m]) => [subjName(id), m, subjColor(id)]);
 
+  const actCard = h('div', { class: 'card act' }, h('h3', {}, 'Activity', h('small', {}, 'study, GitHub and Codeforces')), h('div', { class: 'heats', id: 'heats' }));
   $('#stats').replaceChildren(kpis,
-    h('div', { class: 'card' }, h('h3', {}, 'Last 14 days', h('small', {}, 'by subject')), bars),
-    h('div', { class: 'card' }, h('h3', {}, 'Consistency', h('small', {}, 'last 18 weeks')), heat),
+    h('div', { class: 'card grow' }, h('h3', {}, 'Last 14 days', h('small', {}, 'by subject')), bars),
+    actCard,
     h('div', { class: 'two' },
       h('div', { class: 'card' }, h('h3', {}, 'Leaderboard', h('small', {}, 'your best days')), rank(bestDays)),
       h('div', { class: 'card' }, h('h3', {}, 'Subjects', h('small', {}, 'all time')), rank(topSubj))));
+  renderHeats(st);
+  loadActivity();
 }
+
+// ---------- activity heatmaps: study (local), GitHub and Codeforces (fetched, cached for offline)
+const activity = Object.assign({ gh: null, cf: null }, store.get('activity', {}));
+const actState = { gh: { loading: false, error: '' }, cf: { loading: false, error: '' } };
+const ACT_STALE = 3 * 3600000;
+
+async function loadActivity(force) {
+  if (!api) return;
+  const jobs = [
+    ['gh', settings.ghUser, (u) => api.activity.github(u), (days) => days],
+    ['cf', settings.cfHandle, (u) => api.activity.codeforces(u), (subs) => {
+      const days = {};
+      for (const [t, ok] of subs) { const k = ymd(new Date(t * 1000)); days[k] = days[k] || [0, 0]; days[k][0]++; days[k][1] += ok; }
+      return days;
+    }],
+  ];
+  for (const [key, user, fetcher, shape] of jobs) {
+    const cur = activity[key], s = actState[key];
+    if (!user || s.loading) continue;
+    if (!force && cur && cur.user === user && Date.now() - cur.at < ACT_STALE) continue;
+    s.loading = true; s.error = '';
+    renderHeats();
+    try {
+      activity[key] = { user, at: Date.now(), days: shape(await call(fetcher(user))) };
+      store.set('activity', activity);
+    } catch (err) { s.error = err.message; }
+    s.loading = false;
+    renderHeats();
+  }
+}
+
+function heatmap(weeks, value, color, tip) {
+  const today = new Date();
+  const start = addDays(today, -today.getDay() - 7 * (weeks - 1)); // weeks start on Sunday, like GitHub
+  return h('div', { class: 'heat' }, [...Array(weeks * 7)].map((_, i) => {
+    const d = addDays(start, i);
+    if (d > today) return h('i', { class: 'f' });
+    const v = value(ymd(d)), cell = h('i', { title: tip(d, v) });
+    if (v > 0) cell.style.background = color(v);
+    return cell;
+  }));
+}
+
+function renderHeats(st = studyStats()) {
+  const box = $('#heats');
+  if (!box) return;
+  // As many weeks as fit across a third of the card, so all three sit side by side without scrolling.
+  const weeks = Math.max(8, Math.min(26, Math.floor(((box.clientWidth || 900) - 40) / 3 / 13)));
+  const shade = (base, ratio) => `color-mix(in srgb, ${base} ${Math.round(25 + Math.min(1, ratio) * 75)}%, var(--line))`;
+  const fmtDay = (d) => d.toLocaleDateString('en', { day: 'numeric', month: 'short' });
+  const since = addDays(new Date(), -7 * weeks);
+  const sumSince = (days, get) => Object.entries(days || {}).reduce((a, [k, v]) => (parseYmd(k) >= since ? a + get(v) : a), 0);
+
+  const panel = (title, sub, body, foot) => h('div', { class: 'hp' }, h('div', { class: 'hh' }, h('b', {}, title), h('small', {}, sub)), body, foot || '');
+  const link = (key, label, placeholder) => {
+    const input = h('input', { placeholder, spellcheck: 'false', maxlength: '40', 'aria-label': label });
+    const go = () => { const v = input.value.trim(); if (!v) return; settings[key] = v; saveSettings(); emit('settings'); loadActivity(true); };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    return h('div', { class: 'hlink' }, input, h('button', { class: 'btn sm pri', onclick: go }, 'Link'));
+  };
+  const status = (key) => {
+    const s = actState[key], cur = activity[key];
+    if (s.error) return h('small', { class: 'herr', title: s.error }, cur ? 'Offline, showing saved data' : s.error);
+    if (s.loading) return h('small', {}, 'Updating…');
+    return '';
+  };
+
+  const studied = sumSince(Object.fromEntries(st.byDay), (m) => m);
+  const studyPanel = panel('Study', `${fmtDur(studied)} in ${weeks} weeks`,
+    heatmap(weeks, (k) => st.byDay.get(k) || 0, (m) => shade('var(--accent)', m / 240), (d, m) => `${fmtDay(d)}: ${fmtDur(m)}`));
+
+  const gh = activity.gh && activity.gh.user === settings.ghUser ? activity.gh : null;
+  const ghMax = gh ? Math.max(4, ...Object.values(gh.days)) : 4;
+  const ghPanel = !settings.ghUser ? panel('GitHub', 'not linked', link('ghUser', 'GitHub username', 'GitHub username'))
+    : panel('GitHub', gh ? `${sumSince(gh.days, (c) => c)} contributions · ${settings.ghUser}` : settings.ghUser,
+      heatmap(weeks, (k) => (gh ? gh.days[k] || 0 : 0), (c) => shade('#2ea043', c / ghMax), (d, c) => `${fmtDay(d)}: ${c} contribution${c === 1 ? '' : 's'}`), status('gh'));
+
+  const cfd = activity.cf && activity.cf.user === settings.cfHandle ? activity.cf : null;
+  const cfMax = cfd ? Math.max(3, ...Object.values(cfd.days).map((v) => v[0])) : 3;
+  const cfPanel = !settings.cfHandle ? panel('Codeforces', 'not linked', link('cfHandle', 'Codeforces handle', 'Codeforces handle'))
+    : panel('Codeforces', cfd ? `${sumSince(cfd.days, (v) => v[1])} solved · ${sumSince(cfd.days, (v) => v[0])} submissions` : settings.cfHandle,
+      heatmap(weeks, (k) => (cfd && cfd.days[k] ? cfd.days[k][0] : 0), (n) => shade('#5b9dff', n / cfMax),
+        (d, n) => `${fmtDay(d)}: ${n} submission${n === 1 ? '' : 's'}${cfd && cfd.days[ymd(d)] ? `, ${cfd.days[ymd(d)][1]} accepted` : ''}`), status('cf'));
+
+  box.replaceChildren(studyPanel, ghPanel, cfPanel);
+}
+
+let heatResizeT;
+addEventListener('resize', () => { clearTimeout(heatResizeT); heatResizeT = setTimeout(() => { if (settings.view === 'study') renderHeats(); }, 150); });
+on('settings', () => { if (settings.view === 'study') { renderHeats(); loadActivity(); } });
 
 $('#subj-form').addEventListener('submit', (e) => {
   e.preventDefault();

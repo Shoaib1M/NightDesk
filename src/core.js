@@ -43,7 +43,7 @@ const store = {
 const settings = Object.assign({
   theme: 'dark', palette: 'rose', h24: false, seconds: true, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
-  cfHandle: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
+  cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
 }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 
@@ -373,10 +373,14 @@ async function openSettings() {
   cfIn.addEventListener('change', () => { settings.cfHandle = cfIn.value.trim(); changed(); });
   sheet.append(
     h('h3', {}, 'Codeforces'),
-    row('Handle', 'Shows your rating on the Contests tab', cfIn),
+    row('Handle', 'Rating on the Contests tab, activity heatmap on the Study tab', cfIn),
     row('Remind me 30 minutes before a contest', null, sw('cfRemind')),
     row('Show contests in the calendar', null, sw('cfInCalendar')),
   );
+  const ghIn = h('input', { type: 'text', placeholder: 'your username', spellcheck: 'false', maxlength: '39' });
+  ghIn.value = settings.ghUser;
+  ghIn.addEventListener('change', () => { settings.ghUser = ghIn.value.trim(); changed(); });
+  sheet.append(h('h3', {}, 'GitHub'), row('Username', 'Public contribution heatmap on the Study tab. No sign-in needed', ghIn));
 }
 
 // Dev hook used by the screenshot mode in main.js.
@@ -393,6 +397,8 @@ window.__shot = (step) => {
     else if (part === 'deskpet') { pet.desktop = true; buddySay('Drink some water.', 20000); buddyTick(); }
     else if (part === 'rich') { pet.coins = 900; pet.hat = 'crown'; pet.owned.hat.push('crown'); buddy.tab = 'color'; }
     else if (part === 'petkinds') { buddy.tab = 'kind'; }
+    else if (part.startsWith('gh=')) { settings.ghUser = part.slice(3); }
+    else if (part.startsWith('cf=')) { settings.cfHandle = part.slice(3); }
     else if (part === 'calm') { pet.nudgeOn = false; $('#buddy-say').hidden = true; buddy.bubbleUntil = 0; }
     else showView(part);
   }

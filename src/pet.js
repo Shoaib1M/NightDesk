@@ -343,11 +343,16 @@ function buddyTick() {
 
   // desktop pet window
   const wantDesk = settings.buddy && pet.desktop;
-  if (wantDesk !== buddy.deskOn) { buddy.deskOn = wantDesk; buddy.lastSent = ''; api.pet.desktop(wantDesk); }
+  if (wantDesk !== buddy.deskOn) { buddy.deskOn = wantDesk; buddy.lastSent = ''; stopWalk(); api.pet.desktop(wantDesk); }
   if (wantDesk) {
     const s = { look: petLook(), scale: stage.scale, cls: state, closed: state === 'sleep', sad: mood.sad && state !== 'cheer', bubble: now < buddy.bubbleUntil ? buddy.bubble : '' };
     const j = JSON.stringify(s);
     if (j !== buddy.lastSent) { buddy.lastSent = j; api.pet.state(s); }
+    // On the desktop the pet strolls along whichever monitor it is on.
+    if (pet.roam && (state === 'idle' || state === 'sad') && now > buddy.nextAct) {
+      api.pet.walk(Math.random());
+      buddy.nextAct = now + 12000 + Math.random() * 20000;
+    }
   }
 
   if (settings.view === 'pet') paintPetLive();
@@ -411,7 +416,7 @@ function renderPetView() {
   time.addEventListener('change', () => { if (time.value) { pet.nudgeTime = time.value; savePet(); renderPetView(); } });
   $('#pet-opts').replaceChildren(
     opt('Live on my desktop', 'Floats above other windows; drag it anywhere, click it to open Nightdesk', 'desktop', () => placeBuddy(true)),
-    opt('Roam around', 'Walks, naps and chases the cursor when you are not focusing', 'roam', stopWalk),
+    opt('Roam around', 'Walks about when you are not focusing, in the app and on the desktop', 'roam', stopWalk),
     opt('Break reminders', 'Water, eyes and stretch tips every 20 focused minutes', 'breaks'),
     opt('Nudge me to start', 'Reminds you up to 3 times if nothing is studied by this time', 'nudgeOn'),
     h('label', { class: 'srow' }, h('span', {}, 'Nudge time'), time));
