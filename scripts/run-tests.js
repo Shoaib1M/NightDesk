@@ -1,4 +1,4 @@
-// Runs every in-app check on a fresh throwaway profile:  npm test
+﻿// Runs every in-app check on a fresh throwaway profile:  npm test
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,7 @@ const electron = require('electron');
 let failed = false;
 
 const only = process.argv[2];
-for (const test of ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js']) {
+for (const test of ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js']) {
   if (only && test !== only) continue;
   fs.rmSync(path.join(shots, 'profile'), { recursive: true, force: true });
   const run = spawnSync(electron, ['.'], {

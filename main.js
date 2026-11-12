@@ -119,7 +119,13 @@ async function shoot() {
     await win.webContents.executeJavaScript(`window.__shot(${JSON.stringify(step)})`);
     await wait(step.includes('ring') ? 3000 : 1000);
     const target = step.includes('ring') && overlays[0] ? overlays[0] : step.includes('deskpet') && petWin ? petWin : win;
-    const img = await target.webContents.capturePage();
+    let img = await target.webContents.capturePage();
+    if (step.includes('real')) { // the real on-screen pixels, including compositor glitches capturePage cannot see
+      const cb = win.getContentBounds(), d = screen.getDisplayMatching(cb), sf = d.scaleFactor;
+      const src = (await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: Math.round(d.size.width * sf), height: Math.round(d.size.height * sf) } }))
+        .find((s) => s.display_id === String(d.id));
+      if (src) img = src.thumbnail.crop({ x: Math.round((cb.x - d.bounds.x) * sf), y: Math.round((cb.y - d.bounds.y) * sf), width: Math.round(cb.width * sf), height: Math.round(cb.height * sf) });
+    }
     fs.writeFileSync(path.join(SHOTS, step.replace(/\W+/g, '_') + '.png'), img.toPNG());
     if (step.includes('ring')) { console.log('overlays open:', overlays.length); closeAlarm('stop'); await wait(300); }
   }
@@ -292,7 +298,7 @@ function registerPetIpc() {
       if (cmd === 'dragStart') startPetDrag();
       if (cmd === 'dragEnd') stopPetDrag();
       const b = petWin.getBounds(), d = screen.getDisplayMatching(b);
-      return { bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null };
+      return { bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null, cursor: screen.getCursorScreenPoint() };
     });
   }
 }

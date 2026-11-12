@@ -236,8 +236,8 @@ function placeBuddy(instant) {
   pet.pos.x = Math.max(0, Math.min(innerWidth - w, pet.pos.x));
   pet.pos.y = Math.max(0, Math.min(innerHeight - ht - 4, pet.pos.y));
   if (instant) el.style.transition = 'none';
-  el.style.left = pet.pos.x + 'px';
-  el.style.bottom = pet.pos.y + 'px';
+  // Moved with a GPU transform on its own layer, so the page underneath is never repainted.
+  el.style.transform = `translate3d(${pet.pos.x}px, ${-pet.pos.y}px, 0)`;
 }
 function stopWalk() { clearTimeout(buddy.walkT); buddy.walking = false; buddy.chaseUntil = 0; }
 // While the pet stands at dock height, the stretch of floor under the dock is off limits.
@@ -252,7 +252,7 @@ function walkTo(x) {
   const dist = Math.abs(x - pet.pos.x);
   if (dist < 12) return;
   const secs = dist / 55;
-  $('#buddy').style.transition = `left ${secs}s linear`;
+  $('#buddy').style.transition = `transform ${secs}s linear`;
   $('#buddy').classList.toggle('flip', x < pet.pos.x);
   pet.pos.x = x;
   placeBuddy(false);

@@ -91,7 +91,7 @@ main { position: fixed; inset: 0; }
 .half { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; background: var(--card); }
 .half.top { top: 0; }
 .half.bottom { bottom: 0; }
-.half span { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; }
+.half span { position: absolute; left: 0; right: 0; height: 200%; display: flex; align-items: center; justify-content: center; padding-bottom: var(--flip-lift, .11em); box-sizing: border-box; }
 .half.top span { top: 0; }
 .half.bottom span { bottom: 0; }
 .flap { z-index: 3; backface-visibility: hidden; }
@@ -287,7 +287,8 @@ main { position: fixed; inset: 0; }
 .spot .ib svg { fill: currentColor; stroke: none; }
 
 /* ---------- study pet */
-#buddy { position: fixed; left: 18px; bottom: 16px; z-index: 35; display: flex; flex-direction: column; align-items: flex-start; pointer-events: none; }
+#buddy { position: fixed; left: 0; bottom: 0; z-index: 35; display: flex; flex-direction: column; align-items: flex-start; pointer-events: none;
+  width: max-content; will-change: transform; contain: layout style; transform: translate3d(18px, -16px, 0); }
 #buddy canvas { display: block; image-rendering: pixelated; cursor: grab; pointer-events: auto; touch-action: none; animation: bob 2.4s ease-in-out infinite; }
 #buddy canvas:active { cursor: grabbing; }
 #buddy .flipper { transition: transform .15s; }

@@ -398,6 +398,16 @@ window.__shot = (step) => {
     else if (part === 'rich') { pet.coins = 900; pet.hat = 'crown'; pet.owned.hat.push('crown'); buddy.tab = 'color'; }
     else if (part === 'petkinds') { buddy.tab = 'kind'; }
     else if (part.startsWith('gh=')) { settings.ghUser = part.slice(3); }
+    else if (part === 'bunny') { settings.palette = 'blue'; applyTheme(); pet.kind = 'bunny'; pet.color = 'snow'; pet.desktop = false; }
+    else if (/^(n|real)\d*$/.test(part)) { /* frame marker */ }
+    else if (part === 'floor') { pet.pos = { x: 480, y: 16 }; placeBuddy(true); buddyTick(); }
+    else if (part === 'nudge') { buddySay('It is 10:49 PM and nothing is logged yet. One focus block?', 20000); }
+    else if (part === 'dragup') {
+      const cv = $('#buddy-cv'), r = cv.getBoundingClientRect(), x = r.left + 20, y = r.top + 20;
+      const ev = (t, dy) => cv.dispatchEvent(new PointerEvent(t, { clientX: x, clientY: y + dy, pointerId: 1, bubbles: true }));
+      ev('pointerdown', 0); for (let i = 1; i <= 12; i++) ev('pointermove', -i * 50); ev('pointerup', -600);
+    }
+    else if (part === 'pettop') { pet.pos = { x: 480, y: innerHeight - 80 }; placeBuddy(true); buddyTick(); }
     else if (part.startsWith('cf=')) { settings.cfHandle = part.slice(3); }
     else if (part === 'calm') { pet.nudgeOn = false; $('#buddy-say').hidden = true; buddy.bubbleUntil = 0; }
     else showView(part);

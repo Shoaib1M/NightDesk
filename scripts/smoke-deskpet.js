@@ -31,7 +31,10 @@
     await wait(400);
     const held = await t('info');
     check(`drag stops walking on monitor ${d + 1}`, before.dragging && !held.walking, held);
-    check(`pet stays under a still cursor on monitor ${d + 1}`, Math.abs(held.bounds.x - before.bounds.x) <= 1 && Math.abs(held.bounds.y - before.bounds.y) <= 1, { before: before.bounds, held: held.bounds });
+    // The drag follows the real cursor, so compare the pet-to-cursor offset rather than assume the mouse is still.
+    const off0 = { x: before.bounds.x - before.cursor.x, y: before.bounds.y - before.cursor.y };
+    const off1 = { x: held.bounds.x - held.cursor.x, y: held.bounds.y - held.cursor.y };
+    check(`pet keeps its grip on the cursor on monitor ${d + 1}`, Math.abs(off0.x - off1.x) <= 3 && Math.abs(off0.y - off1.y) <= 3, { off0, off1 });
     const end = await t('dragEnd');
     check(`size stays fixed on monitor ${d + 1}`, Math.abs(end.bounds.width - 260) <= 1 && Math.abs(end.bounds.height - 260) <= 1, end.bounds);
     check(`drag ends and position is saved on monitor ${d + 1}`, !end.dragging && end.saved && end.saved.x === end.bounds.x, end);

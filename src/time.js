@@ -11,6 +11,26 @@ for (const f of [flipH, flipM]) {
   f._s = $$('span', f);
 }
 
+// Fonts place digits below the middle of their line box. Measure the real digit shapes and lift
+// them by the difference, so the flip divider cuts every number exactly in half on any font.
+function centerFlipDigits() {
+  const ref = flipH._s[0];
+  if (!ref || !ref.offsetHeight) return;
+  const cs = getComputedStyle(ref), size = parseFloat(cs.fontSize);
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const g = ctx.measureText('0123456789');
+  if (!g.fontBoundingBoxAscent) return;
+  const fa = g.fontBoundingBoxAscent, fd = g.fontBoundingBoxDescent;
+  const baseline = (size - (fa + fd)) / 2 + fa;                 // baseline inside a line-height: 1 box
+  const digitMid = baseline - (g.actualBoundingBoxAscent - g.actualBoundingBoxDescent) / 2;
+  const lift = Math.max(0, (digitMid - size / 2) * 2);         // padding-bottom shifts content by half
+  for (const f of [flipH, flipM]) f.style.setProperty('--flip-lift', lift + 'px');
+}
+addEventListener('resize', () => requestAnimationFrame(centerFlipDigits));
+on('view', (v) => { if (v === 'clock') requestAnimationFrame(centerFlipDigits); });
+document.fonts && document.fonts.ready.then(centerFlipDigits);
+
 function setFlip(el, v) {
   if (el.dataset.v === v) return;
   const [top, bottom, flapTop, flapBottom] = el._s;
