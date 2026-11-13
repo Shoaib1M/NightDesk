@@ -100,6 +100,12 @@ function migrate({ newDir, oldDir, localAppData, log = () => {} }) {
     fs.renameSync(tmp, path.join(newDir, 'nightdesk.db'));
   }
 
+  // The saved logins are encrypted with a key kept in "Local State": copy the key file from the same
+  // folder the login files come from, or the new folder could not unlock them.
+  const credFrom = sources.find((d) => fs.existsSync(path.join(d, 'google.bin'))) || sources.find((d) => fs.existsSync(path.join(d, 'spotify.bin')));
+  if (credFrom && fs.existsSync(path.join(credFrom, 'Local State')) && !fs.existsSync(path.join(newDir, 'Local State'))) {
+    fs.copyFileSync(path.join(credFrom, 'Local State'), path.join(newDir, 'Local State'));
+  }
   // Small files: the real folder's copy wins, otherwise the first redirected copy that has one.
   for (const f of ['prefs.json', 'google.bin', 'spotify.bin']) {
     const from = sources.find((d) => fs.existsSync(path.join(d, f)));
