@@ -35,8 +35,7 @@ const QUOTES = [
 ];
 
 // Quotes pulled from the internet are added to this pool and kept on disk, so it keeps growing
-// and still works offline. The built-in list above is the starting point.
-const QUOTE_CAP = 1000;
+// and still works offline. Nothing is ever dropped (a thousand quotes is about 100 KB).
 const quote = { online: store.get('quotesOnline', []), changedAt: Date.now(), loading: false };
 const allQuotes = () => [...QUOTES, ...quote.online];
 quote.i = store.get('quoteIndex', Math.floor(Math.random() * QUOTES.length)) % allQuotes().length;
@@ -50,7 +49,7 @@ async function fetchQuotes(force) {
     const fresh = await call(api.quotes.fetch());
     const have = new Set(allQuotes().map(([q]) => q.toLowerCase()));
     const added = fresh.filter(([q]) => { const k = q.toLowerCase(); if (have.has(k)) return false; have.add(k); return true; });
-    quote.online = [...quote.online, ...added].slice(-QUOTE_CAP);
+    quote.online = [...quote.online, ...added];
     store.set('quotesOnline', quote.online);
     store.set('quotesFetched', today);
     if (force) toast(added.length ? `Added ${added.length} new quotes (${allQuotes().length} total).` : 'No new quotes right now. Try again later.');
