@@ -10,6 +10,7 @@
   const RealN = window.Notification;
   window.Notification = function (title) { shown.push(title); };
   settings.buddy = true; pet.desktop = false;
+  window.__fakeWindowsOnly = true; scr.lastWin = null; // the real desktop must not leak into the checks
 
   // ================= exams and syllabus
   const s = study.subjects[0];
@@ -53,13 +54,17 @@
   showView('focus'); pomoSet('focus'); renderPomo();
   await api.focus.mini(true); await wait(1200);
   let info = await t('info');
-  check('mini timer opens', info.mini === true && info.bounds.width === 260, info);
+  check('mini timer opens, bigger', info.mini === true && info.bounds.width === 340 && info.bounds.height === 104, info);
   sendMiniState(); await wait(400);
-  check('mini timer shows the focus time', /FOCUS/.test(await t('miniText')) && /50:00/.test(await t('miniText')), await t('miniText'));
+  check('mini timer shows a fresh block as READY 50:00', /READY/.test(await t('miniText')) && /50:00/.test(await t('miniText')), await t('miniText'));
   await t('miniClick', '#toggle'); await wait(500);
   check('play on the mini timer starts focus', pomo.running && pomo.mode === 'focus', pomo.running);
   await t('miniClick', '#toggle'); await wait(500);
   check('and pauses it', !pomo.running, pomo.running);
+  check('mini timer shows today and the round', /Today .* round 1/.test(await t('miniText')), await t('miniText'));
+  await t('miniClick', '#box'); await wait(800);
+  check('clicking the mini timer opens Nightdesk', (await t('info')).mainVisible === true, await t('info'));
+  check('and keeps the timer as it was', !pomo.running, pomo.running);
   await t('miniClick', '#close'); await wait(500);
   check('close hides the mini timer', (await t('info')).mini === false, null);
 

@@ -361,9 +361,19 @@ function registerPetIpc() {
 
 function showWindow() {
   if (!win) return createWindow();
-  if (win.isMinimized()) win.restore();
-  win.show();
-  win.focus();
+  const bring = () => {
+    if (win.isMinimized()) win.restore();
+    if (!win.isVisible()) win.show();
+    win.focus();
+  };
+  bring();
+  // Windows can ignore a restore that arrives while the window is still animating: check and retry.
+  let tries = 0;
+  const check = () => {
+    if (!win || win.isDestroyed()) return;
+    if ((win.isMinimized() || !win.isVisible()) && tries < 6) { tries++; logInfo(`window restore retried (${tries})`); bring(); setTimeout(check, 200); }
+  };
+  setTimeout(check, 200);
 }
 
 function createTray() {

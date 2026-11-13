@@ -29,7 +29,9 @@
     // a drag interrupts walking and is followed by the cursor (simulated: cursor stays still, so the pet holds)
     const before = await t('dragStart');
     await wait(400);
-    const held = await t('info');
+    // The cursor is the real mouse: take a few readings so moving it during the test can't fail the check.
+    let held = await t('info');
+    for (let k = 0; k < 5 && Math.abs((held.bounds.x - held.cursor.x) - (before.bounds.x - before.cursor.x)) > 3; k++) { await wait(120); held = await t('info'); }
     check(`drag stops walking on monitor ${d + 1}`, before.dragging && !held.walking, held);
     // The drag follows the real cursor, so compare the pet-to-cursor offset rather than assume the mouse is still.
     const off0 = { x: before.bounds.x - before.cursor.x, y: before.bounds.y - before.cursor.y };

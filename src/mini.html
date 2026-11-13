@@ -5,35 +5,52 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
 <title>Nightdesk timer</title>
 <style>
+  :root { --bg: #141416; --text: #f1f0ee; --muted: #a3a29d; --line: #2e2e33; --accent: #d98a7c; --warn: #e5484d; }
+  body.light { --bg: #ffffff; --text: #1c1c1e; --muted: #6b6a66; --line: #e4e1db; }
   html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none;
     font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
-  .box { position: absolute; inset: 4px; border-radius: 16px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px;
-    background: #141416; color: #ececee; border: 1px solid #2c2c31; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); -webkit-app-region: drag; }
-  body.light .box { background: #ffffff; color: #1c1c1e; border-color: #e2dfd9; }
-  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .mode { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--accent, #d98a7c); }
-  .time { font-size: 26px; font-weight: 300; line-height: 1.05; font-variant-numeric: tabular-nums; }
-  .label { font-size: 11px; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .paused .time { opacity: .55; }
-  button { -webkit-app-region: no-drag; width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; padding: 0; opacity: .8; }
-  button:hover { background: rgba(127, 127, 127, .18); opacity: 1; }
-  button svg { width: 17px; height: 17px; }
-  .bar { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 2px; border-radius: 1px; background: rgba(127, 127, 127, .25); overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; background: var(--accent, #d98a7c); }
+  .box { position: absolute; inset: 5px; border-radius: 20px; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .35); display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: 12px; padding: 0 10px 0 12px; cursor: pointer; }
+  .box.distracted { border-color: var(--warn); box-shadow: 0 0 0 2px rgba(229, 72, 77, .35), 0 8px 22px rgba(0, 0, 0, .35); }
+  /* progress ring with play / pause in the middle */
+  .ring { position: relative; width: 70px; height: 70px; }
+  .ring > svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring .trk { fill: none; stroke: var(--line); stroke-width: 5; }
+  .ring .prog { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset .4s; }
+  #toggle { position: absolute; inset: 11px; border-radius: 50%; border: 0; background: var(--accent); color: #111; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  #toggle:hover { filter: brightness(1.08); }
+  #toggle svg { width: 22px; height: 22px; }
+  .info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .mode { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--accent); flex: none; }
+  .label { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .time { font-size: 36px; font-weight: 600; line-height: 1.05; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .paused .time { color: var(--muted); }
+  .status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .distracted .status { color: var(--warn); font-weight: 600; }
+  .side { display: flex; flex-direction: column; gap: 4px; }
+  .side button { width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .side button:hover { background: var(--line); color: var(--text); }
+  .side svg { width: 16px; height: 16px; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button svg { pointer-events: none; }
 </style>
 </head>
 <body>
-<div class="box" id="box">
-  <div class="info">
-    <span class="mode" id="mode">FOCUS</span>
-    <span class="time" id="time">--:--</span>
-    <span class="label" id="label"></span>
+<div class="box" id="box" title="Click to open Nightdesk · drag to move">
+  <div class="ring">
+    <svg viewBox="0 0 70 70"><circle class="trk" cx="35" cy="35" r="31"/><circle class="prog" id="prog" cx="35" cy="35" r="31" stroke-dasharray="194.8" stroke-dashoffset="194.8"/></svg>
+    <button id="toggle" title="Start / pause (Ctrl+Alt+F)" aria-label="Start or pause"></button>
   </div>
-  <button id="toggle" title="Start / pause (Ctrl+Alt+F)" aria-label="Start or pause"></button>
-  <button id="skip" title="Skip to the next block" aria-label="Skip"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5l9 7-9 7zM16 5h2.5v14H16z"/></svg></button>
-  <button id="open" title="Open Nightdesk (Ctrl+Alt+N)" aria-label="Open Nightdesk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
-  <button id="close" title="Hide (Ctrl+Alt+M)" aria-label="Hide mini timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <div class="bar"><i id="bar"></i></div>
+  <div class="info">
+    <div class="top"><span class="mode" id="mode">FOCUS</span><span class="label" id="label"></span></div>
+    <span class="time" id="time">--:--</span>
+    <span class="status" id="status"></span>
+  </div>
+  <div class="side">
+    <button id="skip" title="Skip to the next block" aria-label="Skip"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5l9 7-9 7zM16 5h2.5v14H16z"/></svg></button>
+    <button id="close" title="Hide (Ctrl+Alt+M)" aria-label="Hide mini timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
 </div>
 <script src="mini.js"></script>
 </body>

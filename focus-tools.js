@@ -8,7 +8,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const readline = require('readline');
 
-const MINI = { width: 260, height: 76 };
+const MINI = { width: 340, height: 104 };
 const HOTKEYS = { 'CommandOrControl+Alt+F': 'toggle', 'CommandOrControl+Alt+M': 'mini', 'CommandOrControl+Alt+N': 'open' };
 
 // Prints "<process>|<window title>" for the window in front, once a second, only when it changes.
@@ -57,7 +57,7 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
     if (alive()) return true;
     mini = new BrowserWindow({
       ...MINI, ...miniStart(), frame: false, resizable: false, maximizable: false, minimizable: false, fullscreenable: false,
-      skipTaskbar: true, alwaysOnTop: true, show: false, title: 'Nightdesk timer', backgroundColor: '#00000000', transparent: true, hasShadow: false,
+      skipTaskbar: true, alwaysOnTop: true, focusable: false, show: false, title: 'Nightdesk timer', backgroundColor: '#00000000', transparent: true, hasShadow: false,
       webPreferences: { preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
     });
     mini.setAlwaysOnTop(true, 'floating');
@@ -65,12 +65,36 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
     mini.webContents.once('did-finish-load', () => {
       if (!alive()) return;
       if (lastState) mini.webContents.send('mini:state', lastState);
-      if (!SHOTS) mini.showInactive();
+      if (!SHOTS || process.env.NIGHTDESK_SHOW) mini.showInactive();
     });
-    mini.on('moved', () => { if (alive() && !SHOTS) { const [x, y] = mini.getPosition(); prefs.miniPos = { x, y }; savePrefs(); } });
+
     mini.on('closed', () => { mini = null; });
+    // Safety net: the mini timer is only ever activated by a click on it. If that click doesn't
+    // reach the page (no button, drag or open follows within half a second), open Nightdesk anyway.
+    mini.on('focus', () => { clearTimeout(clickNet); const since = miniCmdCount; clickNet = setTimeout(() => { if (miniCmdCount === since) showWindow(); }, 500); });
     if (!SHOTS) { prefs.miniOn = true; savePrefs(); }
     return true;
+  }
+
+  // Dragging follows the real cursor (works across monitors with different scaling).
+  let dragTimer = null;
+  const miniCmds = []; // last commands from the mini timer (also used by the click safety net)
+  let clickNet = null;
+  let miniCmdCount = 0;
+  function stopMiniDrag() {
+    if (!dragTimer) return;
+    clearInterval(dragTimer); dragTimer = null;
+    if (alive() && !SHOTS) { const [x, y] = mini.getPosition(); prefs.miniPos = { x, y }; savePrefs(); }
+  }
+  function startMiniDrag() {
+    if (!alive()) return;
+    stopMiniDrag();
+    const c = screen.getCursorScreenPoint(), [x, y] = mini.getPosition(), off = { x: c.x - x, y: c.y - y }, started = Date.now();
+    dragTimer = setInterval(() => {
+      if (!alive() || Date.now() - started > 60000) return stopMiniDrag();
+      const p = screen.getCursorScreenPoint();
+      mini.setBounds({ x: p.x - off.x, y: p.y - off.y, ...MINI });
+    }, 16);
   }
 
   ipcMain.on('mini:state', (e, s) => {
@@ -81,7 +105,11 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
   });
   ipcMain.on('mini:cmd', (e, cmd) => {
     if (!alive() || e.sender !== mini.webContents) return;
+    miniCmds.push(cmd); if (miniCmds.length > 20) miniCmds.shift();
+    miniCmdCount++;
     if (cmd === 'open') { showWindow(); return; }
+    if (cmd === 'dragStart') return startMiniDrag();
+    if (cmd === 'dragEnd') return stopMiniDrag();
     if (cmd === 'close') { setMini(false); notifyMini(); return; }
     if (['toggle', 'skip', 'reset'].includes(cmd)) { const w = getWin(); if (w) w.webContents.send('focus:cmd', cmd); }
   });
@@ -132,11 +160,14 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
   // ---------- tests only
   if (SHOTS) {
     handle('focus:test', async (cmd, arg) => {
-      if (cmd === 'fakeWindow') { const w = getWin(); if (w) w.webContents.send('guard:window', arg); return true; }
+      if (cmd === 'fakeWindow') { const w = getWin(); if (w) w.webContents.send('guard:window', { ...arg, fake: true }); return true; }
       if (cmd === 'miniClick' && alive()) return mini.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(arg)}).click(); true`);
       if (cmd === 'miniText' && alive()) return mini.webContents.executeJavaScript('document.body.innerText');
+      if (cmd === 'miniShot' && alive()) { const img = await mini.webContents.capturePage(); require('fs').writeFileSync(path.join(SHOTS, 'mini-' + arg + '.png'), img.toPNG()); return true; }
       if (cmd === 'hotkey') { fire(arg); return true; }
-      return { mini: alive(), bounds: alive() ? mini.getBounds() : null, watching: !!watcher };
+      if (cmd === 'minimizeMain') { const w = getWin(); if (w) w.minimize(); return true; }
+      const w = getWin();
+      return { mini: alive(), bounds: alive() ? mini.getBounds() : null, watching: !!watcher, mainVisible: !!(w && w.isVisible()), mainMinimized: !!(w && w.isMinimized()), miniCmds };
     });
   }
 

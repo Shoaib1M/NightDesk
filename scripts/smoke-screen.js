@@ -5,6 +5,7 @@
   const wait = (ms) => new Promise((res) => setTimeout(res, ms));
   const check = (name, ok, info) => { count++; if (!ok) fails.push(`${name} -> ${JSON.stringify(info)}`); };
   const today = ymd(new Date());
+  window.__fakeWindowsOnly = true; // the real desktop must not leak into the checks
 
   // ----- recognising apps and sites
   const c = (p, t) => classifyWindow(p, t);
@@ -21,9 +22,9 @@
   settings.screenTime = true;
   store.set('screen-' + today, {});
   scr.cur = null; scr.since = 0; scr.paused = false;
-  screenOnWindow({ proc: 'Code', title: 'secret-project.js - Visual Studio Code' });
+  screenOnWindow({ fake: true, proc: 'Code', title: 'secret-project.js - Visual Studio Code' });
   scr.since = Date.now() - 60000;
-  screenOnWindow({ proc: 'chrome', title: 'Some private video title - YouTube - Google Chrome' });
+  screenOnWindow({ fake: true, proc: 'chrome', title: 'Some private video title - YouTube - Google Chrome' });
   let d = screenDay(today);
   check('a minute in VS Code is counted', Math.abs((d.apps['VS Code'] || 0) - 60000) < 2000 && Math.abs((d.cats.work || 0) - 60000) < 2000, d);
   check('switching apps is counted', d.switches === 1, d.switches);
@@ -33,11 +34,11 @@
   check('a long gap (sleep, freeze) counts at most two minutes', Math.abs((d.apps.YouTube || 0) - 120000) < 2000, d.apps.YouTube);
   scr.paused = true; scr.since = Date.now() - 60000; screenAdd(); scr.paused = false;
   check('idle or locked time is not counted', Math.abs((screenDay(today).apps.YouTube || 0) - 120000) < 2000, screenDay(today).apps.YouTube);
-  screenOnWindow({ proc: 'LockApp', title: 'Windows Default Lock Screen' });
+  screenOnWindow({ fake: true, proc: 'LockApp', title: 'Windows Default Lock Screen' });
   check('the lock screen is not an app', scr.cur === null, scr.cur);
   const saved = JSON.stringify(store.get('screen-' + today, {}));
   check('window titles are never stored', !/secret-project|private video/i.test(saved), saved.slice(0, 200));
-  settings.screenTime = false; screenOnWindow({ proc: 'Code', title: 'x' });
+  settings.screenTime = false; screenOnWindow({ fake: true, proc: 'Code', title: 'x' });
   check('switched off: nothing is tracked', JSON.stringify(store.get('screen-' + today, {})) === saved, null);
   settings.screenTime = true;
 

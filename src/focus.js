@@ -11,6 +11,7 @@ function sendMiniState() {
     mode: pomo.mode, running: pomo.running, endAt: pomo.endAt, left: pomo.left, dur: pomo.dur,
     longBreak: pomo.mode === 'break' && pomo.dur === settings.longMin * 60000 && settings.longMin !== settings.breakMin,
     label: $('#p-task').value.trim() || (subj ? subj.name : ''), theme: settings.theme, palette: settings.palette,
+    round: pomo.round, todayMin: studyStats().today, distracted: guard.since ? guard.app : '',
   };
   const j = JSON.stringify(s);
   if (j !== miniSent) { miniSent = j; api.focus.miniState(s); }
@@ -60,7 +61,9 @@ function guardFlush(now = Date.now()) {
   return ms;
 }
 
-function onForegroundWindow({ proc, title }) {
+function onForegroundWindow(w) {
+  if (window.__fakeWindowsOnly && !w.fake) return; // tests: ignore the real desktop
+  const { proc, title } = w;
   if (!(pomo.running && pomo.mode === 'focus' && settings.guard !== false)) return;
   const hit = matchDistraction(proc, title);
   if (hit && !guard.since) {

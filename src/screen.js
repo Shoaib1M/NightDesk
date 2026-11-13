@@ -73,6 +73,7 @@ function screenAdd(now = Date.now()) {
 }
 
 function screenOnWindow(w) {
+  if (w && window.__fakeWindowsOnly && !w.fake) return; // tests: ignore the real desktop
   if (!w || w.stopped) return;
   scr.lastWin = w;
   if (settings.screenTime === false) return;
