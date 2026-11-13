@@ -35,8 +35,8 @@ for (const test of suites) {
     report(test + ' (old WAL database, empty backup)', passed(a), a.out);
     const b = launch('smoke-safety-b.js');
     const walGone = !fs.existsSync(path.join(prof, 'nightdesk.db-wal'));
-    const emptyGone = !fs.existsSync(path.join(prof, 'backups', 'nightdesk-2025-02-01.db'));
-    report(test + ' (cut-off session folded back in)', passed(b) && walGone && emptyGone, (walGone ? '' : 'WAL file still there\n') + (emptyGone ? '' : 'empty backup still there\n') + b.out);
+    const emptyKept = fs.existsSync(path.join(prof, 'backups', 'nightdesk-2025-02-01.db')); // kept, never offered
+    report(test + ' (cut-off session folded back in)', passed(b) && walGone && emptyKept, (walGone ? '' : 'WAL file still there\n') + (emptyKept ? '' : 'empty backup was deleted; it should be kept\n') + b.out);
     // A database that cannot be opened at all: a folder where the file should be.
     fs.rmSync(prof, { recursive: true, force: true });
     fs.mkdirSync(path.join(prof, 'nightdesk.db'), { recursive: true });

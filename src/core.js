@@ -62,6 +62,11 @@ const store = (() => {
         if (!cache.pomoState && localStorage.getItem('nd.pomoState')) put('pomoState', localStorage.getItem('nd.pomoState'));
         put('__recovered', JSON.stringify({ at: Date.now(), sessions: extra.length, minutes: extra.reduce((a, e) => a + e.m, 0) }));
       } catch {}
+      // Nothing is thrown away: a full snapshot of what was in browser storage is kept in the database.
+      try {
+        const snap = Object.fromEntries(leftovers.map((k) => [k.slice(3), localStorage.getItem(k)]));
+        put(`__browserStorage-${Date.now()}`, JSON.stringify(snap));
+      } catch {}
       for (const k of leftovers) localStorage.removeItem(k);
     }
   }

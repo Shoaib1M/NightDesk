@@ -104,7 +104,7 @@ function open(quick) {
     set: db.prepare('INSERT INTO kv (key, value, updated) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated = excluded.updated'),
     del: db.prepare('DELETE FROM kv WHERE key = ?'),
   };
-  cleanEmptyBackups();
+  // Empty backups are kept too; they are simply never offered for restore (see usable()).
   dailyBackup();
   return db;
 }

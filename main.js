@@ -60,7 +60,8 @@ function logError(where, err) {
   console.error(line.trim());
   try {
     const f = path.join(app.getPath('userData'), 'nightdesk.log');
-    try { if (fs.statSync(f).size > 1e6) fs.renameSync(f, f + '.old'); } catch {}
+    // Past logs are kept: a full one is renamed with its date instead of being overwritten.
+    try { if (fs.statSync(f).size > 1e6) fs.renameSync(f, f.replace(/\.log$/,`-${new Date().toISOString().slice(0, 10)}-${Date.now()}.log`)); } catch {}
     fs.appendFileSync(f, line);
   } catch {}
 }

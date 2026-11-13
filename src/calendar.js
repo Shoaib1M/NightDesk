@@ -313,7 +313,7 @@ function contestReminders() {
   const now = Date.now();
   for (const c of cal.contests) {
     if (c.start > now && c.start - now <= 30 * 60000 && !cf.reminded.includes(c.id)) {
-      cf.reminded = [...cf.reminded.slice(-50), c.id]; store.set('cfReminded', cf.reminded);
+      cf.reminded = [...cf.reminded, c.id]; store.set('cfReminded', cf.reminded); // kept forever
       chime();
       notify('Codeforces contest soon', `${c.name} starts ${fmtRel(c.start - now)}.`);
       buddySay(`${c.name} starts ${fmtRel(c.start - now)}.`, 12000);

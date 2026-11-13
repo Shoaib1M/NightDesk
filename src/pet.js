@@ -33,7 +33,7 @@ function ensureDay() {
   const d = ymd(new Date());
   if (pet.day.date === d) return;
   pet.day = { date: d, minutes: 0, blocks: 0, pets: 0, plays: 0, early: 0, nudges: 0, lastNudge: 0, claimed: [] };
-  for (const k of Object.keys(pet.cele)) if (!k.startsWith('lvl') && !k.endsWith(d)) delete pet.cele[k];
+  // Celebration records are kept forever (each is dated, so old ones never block a new one).
 }
 
 // Stats drift down slowly while nobody is looking; capped so a long holiday is not a disaster.
