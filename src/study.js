@@ -8,14 +8,28 @@ const study = {
     { id: 's2', name: 'Maths', color: SUBJ_COLORS[1], goal: 60 },
     { id: 's3', name: 'Core subject', color: SUBJ_COLORS[2], goal: 60 },
   ]),
-  log: store.get('log', []), // { t: timestamp, m: minutes, s: subject id or '' }
+  // { t: timestamp, m: minutes, s: subject id or '', d: 'YYYY-MM-DD' local date where it happened }
+  log: store.get('log', []),
 };
 const saveSubjects = () => { store.set('subjects', study.subjects); emit('subjects'); renderStudy(); };
+
+// Each session remembers the calendar day it happened on, in the time zone you were in at the
+// time. Travelling later (Dubai is 1.5 hours behind India) never moves it to a different day.
+// Sessions saved before this existed get the day they show today, once.
+const sessionDay = (e) => e.d || ymd(new Date(e.t));
+function stampSessionDays() {
+  if (!study.log.some((e) => !e.d)) return 0;
+  let n = 0;
+  study.log = study.log.map((e) => (e.d ? e : (n++, { ...e, d: ymd(new Date(e.t)) })));
+  store.set('log', study.log);
+  return n;
+}
+stampSessionDays();
 
 function logStudy(minutes, subjectId) {
   minutes = Math.round(minutes);
   if (minutes < 1) return;
-  study.log.push({ t: Date.now(), m: minutes, s: subjectId || '' });
+  study.log.push({ t: Date.now(), m: minutes, s: subjectId || '', d: ymd(new Date()) });
   store.set('log', study.log);
   renderStudy();
   emit('studied', minutes);
@@ -25,7 +39,7 @@ function studyStats() {
   const byDay = new Map(), bySubj = new Map(), byDaySubj = new Map();
   let total = 0;
   for (const e of study.log) {
-    const k = ymd(new Date(e.t));
+    const k = sessionDay(e);
     byDay.set(k, (byDay.get(k) || 0) + e.m);
     bySubj.set(e.s, (bySubj.get(e.s) || 0) + e.m);
     byDaySubj.set(k + '|' + e.s, (byDaySubj.get(k + '|' + e.s) || 0) + e.m);
