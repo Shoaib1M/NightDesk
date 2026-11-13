@@ -14,14 +14,17 @@ const file = () => path.join(app.getPath('userData'), 'google.bin');
 let state = null;
 let pendingServer = null;
 
+// Only a missing file means "not set up". Any other read problem (file busy, encryption not ready
+// yet) is temporary: report not-connected for now but do not remember it, so the next call retries.
 function load() {
   if (state) return state;
+  let raw;
+  try { raw = fs.readFileSync(file()); }
+  catch (err) { if (err.code === 'ENOENT') return (state = {}); console.error('[credentials] read failed, will retry', err.message); return {}; }
   try {
-    const raw = fs.readFileSync(file());
-    state = JSON.parse(safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(raw) : raw.toString('utf8'));
-  } catch {
-    state = {};
-  }
+    if (!safeStorage.isEncryptionAvailable()) return {};
+    state = JSON.parse(safeStorage.decryptString(raw));
+  } catch (err) { console.error('[credentials] could not decrypt yet, will retry', err.message); return {}; }
   return state;
 }
 

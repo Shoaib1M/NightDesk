@@ -392,3 +392,10 @@ main { position: fixed; inset: 0; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .study { grid-template-columns: 320px 1fr; }
 }
+
+/* shown only if the database cannot be opened: covers the app so nothing unsaved can happen */
+.dbdown { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--bg); text-align: center; padding: 24px; }
+.dbdown > div { max-width: 460px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.dbdown h1 { font-size: 22px; }
+.dbdown p { color: var(--muted); line-height: 1.5; }
+.dbdown .dbdown-err { font-size: 12px; font-family: Consolas, monospace; opacity: .7; }

@@ -137,16 +137,18 @@ Sounds are generated with the Web Audio API and the pet is drawn pixel by pixel 
 
 ## Where your data lives
 
-Everything (subjects, study log, calendar, alarms and snoozes, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%APPDATA%Nightdesk
+Everything (subjects, study log, calendar, alarms and snoozes, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%USERPROFILE%.nightdesk
 ightdesk.db`. Each change is written to disk the moment it happens (WAL journal, `synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything.
 
 **Backups, kept forever.** A copy is made every day (also while the app keeps running for days in the tray) into `backups/`, and a second copy goes to `DocumentsNightdesk Backups`. If Documents syncs to OneDrive, that copy also lives off the PC. Each copy is a few kilobytes, so years of them take almost no space.
+
+**One folder, whoever starts the app.** Data lives outside AppData on purpose: Windows redirects AppData writes from programs started inside packaged apps (for example a terminal inside the Claude desktop app) to a hidden per-app copy, which would make different launches see different data. The first start of this version moves everything from the old `%APPDATA%Nightdesk` folder, merging in any such hidden copies, and leaves the originals untouched.
 
 **Self-repair.** If the database is ever damaged, the newest good copy is restored on start. If the whole app data folder is wiped (or you set up a new PC), NightDesk finds the copies in Documents and brings everything back.
 
 **Undo.** Settings → Your data → *Restore a day* rolls everything back to any saved day; the state just before the restore is saved too, so a restore can itself be undone.
 
-Errors are written to `%APPDATA%Nightdesk
+Errors are written to `%USERPROFILE%.nightdesk
 ightdesk.log`, and a stray error never closes the app. Alarms that come due while the laptop sleeps ring when it wakes (up to an hour late, labelled "missed").
 
 Google and Spotify tokens sit next to the database, encrypted with Windows' own credential protection. You enter them once; both renew themselves.

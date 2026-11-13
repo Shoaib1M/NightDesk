@@ -13,7 +13,24 @@ app.setAppUserModelId(APP_ID);
 
 // Dev-only: NIGHTDESK_SHOTS=<dir> captures each view to PNG and exits, using a throwaway profile.
 const SHOTS = process.env.NIGHTDESK_SHOTS;
-if (SHOTS) app.setPath('userData', path.join(SHOTS, 'profile'));
+
+// All data lives in %USERPROFILE%\.nightdesk, outside AppData. Windows silently redirects AppData
+// writes made by programs started from packaged apps (such as the Claude desktop app) into a hidden
+// per-package copy, which made different launches see different data. This folder is never
+// redirected, so every launch, from anywhere, uses the same files. NIGHTDESK_DATA overrides it (tests).
+const OLD_DATA = path.join(app.getPath('appData'), 'Nightdesk');
+const DATA = SHOTS ? path.join(SHOTS, 'profile') : (process.env.NIGHTDESK_DATA || path.join(require('os').homedir(), '.nightdesk'));
+app.setPath('userData', DATA);
+// Runs once, in the first (real) copy of the app only: never in a short-lived --quit launcher.
+function moveOldData() {
+  if (SHOTS) return;
+  const note = (m) => { try { fs.mkdirSync(DATA, { recursive: true }); fs.appendFileSync(path.join(DATA, 'nightdesk.log'), `[${new Date().toISOString()}] ${m}\n`); } catch {} };
+  try {
+    require('./migrate').migrate({
+      newDir: DATA, oldDir: OLD_DATA, localAppData: process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local'), log: note,
+    });
+  } catch (err) { note(`data move failed: ${err.stack}`); }
+}
 const ICON = path.join(__dirname, 'build', 'icon.png');
 
 let win = null;
@@ -39,6 +56,9 @@ function logError(where, err) {
     try { if (fs.statSync(f).size > 1e6) fs.renameSync(f, f + '.old'); } catch {}
     fs.appendFileSync(f, line);
   } catch {}
+}
+function logInfo(msg) {
+  try { fs.appendFileSync(path.join(app.getPath('userData'), 'nightdesk.log'), `[${new Date().toISOString()}] ${msg}\n`); } catch {}
 }
 // A stray error must never take the app (and its timers and alarms) down.
 process.on('uncaughtException', (err) => logError('uncaught', err));
@@ -77,6 +97,7 @@ function createWindow() {
     minWidth: 900, minHeight: 620,
     backgroundColor: '#000000',
     show: false,
+    paintWhenInitiallyHidden: true,
     autoHideMenuBar: true,
     title: 'Nightdesk',
     icon: ICON,
@@ -90,7 +111,7 @@ function createWindow() {
   });
   Menu.setApplicationMenu(null);
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { if (!SHOTS) win.show(); });
 
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
@@ -143,6 +164,7 @@ async function shoot() {
     const target = step.includes('ring') && overlays[0] ? overlays[0] : step.includes('deskpet') && petWin ? petWin : win;
     let img = await target.webContents.capturePage();
     if (step.includes('real')) { // the real on-screen pixels, including compositor glitches capturePage cannot see
+      win.showInactive(); await wait(600);
       const cb = win.getContentBounds(), d = screen.getDisplayMatching(cb), sf = d.scaleFactor;
       const src = (await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: Math.round(d.size.width * sf), height: Math.round(d.size.height * sf) } }))
         .find((s) => s.display_id === String(d.id));
@@ -188,7 +210,7 @@ async function showAlarm(data) {
     w.alarmImg = shots[String(d.id)] || first;
     w.setAlwaysOnTop(true, 'screen-saver');
     w.loadFile(path.join(__dirname, 'src', 'alarm.html'));
-    w.once('ready-to-show', () => { w.show(); w.setBounds(d.bounds); w.focus(); });
+    w.once('ready-to-show', () => { if (SHOTS) return; w.show(); w.setBounds(d.bounds); w.focus(); });
     // Closing one overlay by hand (Alt+F4) counts as Stop.
     w.on('closed', () => { if (overlays.includes(w)) closeAlarm('stop'); });
     overlays.push(w);
@@ -225,7 +247,7 @@ function setDesktopPet(on) {
   petWin.webContents.once('did-finish-load', () => {
     if (!petWin || petWin.isDestroyed()) return;
     if (lastPetState) petWin.webContents.send('pet:state', lastPetState);
-    petWin.showInactive();
+    if (!SHOTS) petWin.showInactive();
   });
   petWin.on('closed', () => { petWin = null; });
   petWin.once('show', () => movePet(...petWin.getPosition()));
@@ -360,6 +382,8 @@ async function cfApi(method, query) {
   return json.result;
 }
 
+db.setLogger((...a) => logError('database', a.map((x) => (x && x.stack) || x).join(' ')));
+
 function applyMirror() {
   const folder = SHOTS ? path.join(SHOTS, 'profile', 'mirror') : path.join(app.getPath('documents'), 'Nightdesk Backups');
   db.setMirror(prefs.mirrorBackups === false ? null : folder);
@@ -367,13 +391,17 @@ function applyMirror() {
 
 function registerDbIpc() {
   // Loaded once, synchronously, when the page starts; every later change is written straight away.
-  ipcMain.on('db:load', (e) => {
-    try { e.returnValue = { ok: true, data: db.loadAll() }; }
-    catch (err) { console.error(err); e.returnValue = { ok: false, error: String(err.message || err) }; }
+  ipcMain.on('db:load', (e, quick) => {
+    try {
+      const data = db.loadAll(!!quick);
+      logInfo(`start-up: loaded ${Object.keys(data).length} items from ${db.file()}${quick ? ' (retry)' : ''}`);
+      e.returnValue = { ok: true, data };
+    }
+    catch (err) { logError('database load', err); e.returnValue = { ok: false, error: String(err.message || err) }; }
   });
   ipcMain.on('db:set', (e, key, value) => {
     if (!win || e.sender !== win.webContents) return;
-    try { db.set(key, value); } catch (err) { console.error('db write failed', err); }
+    try { db.set(key, value); } catch (err) { logError('database write ' + key, err); }
   });
   handle('db:backup', () => db.backupNow());
   handle('db:backups', () => db.backupCount());
@@ -497,14 +525,19 @@ function registerIpc() {
   handle('gcal:remove', (calendarId, id) => gcal.remove(calendarId, id));
 }
 
-if (process.argv.includes('--quit')) {
-  app.quit(); // asked to close a running copy; if this is the only one there is nothing to do
-} else if (!SHOTS && !app.requestSingleInstanceLock()) {
+// A second launch hands its arguments to the running copy (second-instance) and exits. That is how
+// the installer's --quit request reaches the running app.
+const firstCopy = SHOTS || app.requestSingleInstanceLock();
+if (!firstCopy || process.argv.includes('--quit')) {
   app.quit();
 } else {
+  moveOldData();
   app.on('second-instance', (_e, argv) => {
     if (argv.includes('--quit')) { quitting = true; app.quit(); return; }
     showWindow();
+    // --view=<tab> opens that tab, for example: Nightdesk.exe --view=study
+    const v = argv.map((x) => /^--view=([a-z]+)$/.exec(x)).find(Boolean);
+    if (v && win) win.webContents.send('app:view', v[1]);
   });
   app.on('will-quit', () => db.close());
   app.on('before-quit', () => { quitting = true; });

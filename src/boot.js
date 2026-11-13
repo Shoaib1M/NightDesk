@@ -30,3 +30,4 @@ loadCfUser();
 
 // After the laptop wakes up: ring anything that came due while it slept, and refresh online data.
 if (api) api.db.onResume(() => { tickAlarms(); syncCalendar(); loadContests(); });
+if (api) api.db.onView((v) => showView(v));

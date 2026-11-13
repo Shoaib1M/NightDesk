@@ -24,10 +24,26 @@ const report = (name, ok, out) => {
   else if (/"checks"/.test(out)) console.log(out.match(/"checks": \d+/)[0]);
 };
 
-const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-persist'];
+const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-safety', 'smoke-persist'];
 for (const test of suites) {
   if (only && test !== only) continue;
   fs.rmSync(path.join(shots, 'profile'), { recursive: true, force: true });
+  if (test === 'smoke-safety') {
+    const prof = path.join(shots, 'profile');
+    spawnSync(process.execPath, ['--no-warnings', path.join(__dirname, 'prepare-safety.js'), prof], { encoding: 'utf8' });
+    const a = launch('smoke-safety-a.js');
+    report(test + ' (old WAL database, empty backup)', passed(a), a.out);
+    const b = launch('smoke-safety-b.js');
+    const walGone = !fs.existsSync(path.join(prof, 'nightdesk.db-wal'));
+    const emptyGone = !fs.existsSync(path.join(prof, 'backups', 'nightdesk-2025-02-01.db'));
+    report(test + ' (cut-off session folded back in)', passed(b) && walGone && emptyGone, (walGone ? '' : 'WAL file still there\n') + (emptyGone ? '' : 'empty backup still there\n') + b.out);
+    // A database that cannot be opened at all: a folder where the file should be.
+    fs.rmSync(prof, { recursive: true, force: true });
+    fs.mkdirSync(path.join(prof, 'nightdesk.db'), { recursive: true });
+    const c = launch('smoke-safety-down.js');
+    report(test + ' (database unavailable: blocks, saves nothing)', passed(c), c.out);
+    continue;
+  }
   if (test === 'smoke-persist') {
     // Write data, kill the app with no clean shutdown, start again on the same profile and read it back.
     const w = launch('smoke-persist-write.js', { NIGHTDESK_HARDKILL: '1' });

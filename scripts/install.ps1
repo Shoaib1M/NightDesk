@@ -7,18 +7,22 @@ $built = Join-Path $root 'release\Nightdesk-win32-x64'
 $dest = Join-Path $env:LOCALAPPDATA 'Programs\Nightdesk'
 $exe = Join-Path $dest 'Nightdesk.exe'
 
-# Ask a running copy to quit cleanly (it saves and closes its database), and only force it after 15 s.
-$running = Get-Process Nightdesk -ErrorAction SilentlyContinue | Where-Object Path | Select-Object -First 1
-if ($running) {
-  Start-Process $running.Path -ArgumentList '--quit'
-  for ($i = 0; $i -lt 30 -and (Get-Process Nightdesk -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
-  Get-Process Nightdesk -ErrorAction SilentlyContinue | Stop-Process -Force
-  Start-Sleep -Seconds 1
-}
-
+# Build first, while the installed app keeps running.
 Set-Location $root
 npm run build
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $built 'resources\app.asar'))) { throw 'Build failed; the installed copy was left untouched.' }
+
+# Ask the running app to quit cleanly: launching any copy with --quit hands the request to the
+# running one, which saves and closes its database. Only force it if it has not gone after 20 s.
+if (Get-Process Nightdesk -ErrorAction SilentlyContinue) {
+  Start-Process (Join-Path $built 'Nightdesk.exe') -ArgumentList '--quit'
+  for ($i = 0; $i -lt 40 -and (Get-Process Nightdesk -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
+  if (Get-Process Nightdesk -ErrorAction SilentlyContinue) {
+    Write-Warning 'Nightdesk did not close by itself; forcing it.'
+    Get-Process Nightdesk -ErrorAction SilentlyContinue | Stop-Process -Force
+  }
+  Start-Sleep -Seconds 1
+}
 
 robocopy $built $dest /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "Copy failed (robocopy $LASTEXITCODE)." }
@@ -42,5 +46,7 @@ foreach ($path in $links) {
 }
 Get-ChildItem $desktop, $programs -Filter 'Nightdesk (*).lnk' -ErrorAction SilentlyContinue | Remove-Item -Force
 
-Start-Process $exe
-"Installed to $dest"
+# The first start after the data move must come from the taskbar or Start menu (see main.js), so only
+# relaunch automatically once the data already lives in %USERPROFILE%\.nightdesk.
+if (Test-Path (Join-Path $env:USERPROFILE '.nightdesk\nightdesk.db')) { Start-Process $exe; "Installed to $dest and started" }
+else { "Installed to $dest. Open Nightdesk from the taskbar to finish moving your data." }

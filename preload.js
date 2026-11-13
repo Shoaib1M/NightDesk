@@ -4,7 +4,7 @@ const inv = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 
 contextBridge.exposeInMainWorld('api', {
   db: {
-    load: () => ipcRenderer.sendSync('db:load'),
+    load: (quick) => ipcRenderer.sendSync('db:load', !!quick),
     set: (key, value) => ipcRenderer.send('db:set', key, value),
     backup: inv('db:backup'),
     backups: inv('db:backups'),
@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('api', {
     mirror: inv('db:mirror'),
     openMirror: inv('db:openMirror'),
     onResume: (cb) => ipcRenderer.on('app:resume', () => cb()),
+    onView: (cb) => ipcRenderer.on('app:view', (_e, v) => cb(v)),
     folder: inv('db:folder'),
   },
   app: {

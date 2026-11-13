@@ -29,30 +29,49 @@ async function call(promise) {
 // All saved data lives in a local SQLite database (db.js in the main process). The whole table is
 // read once at start-up; every change is written to disk immediately. Browser storage is only used
 // if the database is unavailable, and anything still in it from older versions is moved across once.
+// All saved data lives in the local SQLite database (db.js in the main process). It is read once at
+// start-up and every change is written to disk immediately.
+//
+// If the database cannot be opened, the app does NOT carry on with empty starter data: it shows a
+// blocking notice, saves nothing, and keeps retrying until the database is back.
 const store = (() => {
-  let cache = {}, persistent = false;
+  let cache = {}, persistent = false, loadError = '';
   try {
     const r = window.api && api.db.load();
-    if (r && r.ok) { cache = r.data; persistent = true; }
-  } catch {}
-  if (persistent && !cache.__migrated) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k.startsWith('nd.') || cache[k.slice(3)] != null) continue;
-        cache[k.slice(3)] = localStorage.getItem(k);
-        api.db.set(k.slice(3), cache[k.slice(3)]);
-      }
-    } catch {}
-    cache.__migrated = '1';
-    api.db.set('__migrated', '1');
+    if (r && r.ok) { cache = r.data; persistent = true; } else loadError = (r && r.error) || 'no response';
+  } catch (err) { loadError = err.message; }
+
+  const lsKeys = () => { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('nd.')) out.push(k); } } catch {} return out; };
+  const put = (key, s) => { cache[key] = s; api.db.set(key, s); };
+  if (persistent) {
+    const leftovers = lsKeys();
+    if (!cache.__migrated) {
+      // First start on the database: bring everything across from the old browser storage.
+      for (const k of leftovers) if (cache[k.slice(3)] == null) put(k.slice(3), localStorage.getItem(k));
+      put('__migrated', '1');
+    } else if (leftovers.length) {
+      // Data written to browser storage by an older version that lost touch with the database:
+      // fold its study sessions and its focus block in progress back in, then clear it.
+      try {
+        const lsLog = JSON.parse(localStorage.getItem('nd.log') || '[]');
+        const dbLog = JSON.parse(cache.log || '[]');
+        const known = new Set(dbLog.map((e) => e.t));
+        const subjectIds = new Set(JSON.parse(cache.subjects || '[]').map((s) => s.id));
+        const extra = lsLog.filter((e) => e && e.t > 0 && e.m > 0 && !known.has(e.t)).map((e) => ({ t: e.t, m: e.m, s: subjectIds.has(e.s) ? e.s : '' }));
+        if (extra.length) put('log', JSON.stringify([...dbLog, ...extra].sort((a, b) => a.t - b.t)));
+        if (!cache.pomoState && localStorage.getItem('nd.pomoState')) put('pomoState', localStorage.getItem('nd.pomoState'));
+        put('__recovered', JSON.stringify({ at: Date.now(), sessions: extra.length, minutes: extra.reduce((a, e) => a + e.m, 0) }));
+      } catch {}
+      for (const k of leftovers) localStorage.removeItem(k);
+    }
   }
-  const raw = (key) => (persistent ? cache[key] : (() => { try { return localStorage.getItem('nd.' + key); } catch { return null; } })());
+
   return {
     persistent,
+    loadError,
     get(key, fallback) {
       try {
-        const v = raw(key);
+        const v = cache[key];
         if (v == null) return fallback;
         const parsed = JSON.parse(v);
         // Damaged or unexpected saved data must never break start-up: fall back instead.
@@ -61,18 +80,30 @@ const store = (() => {
       } catch { return fallback; }
     },
     set(key, value) {
+      if (!persistent) return; // never save anywhere but the database
       const s = JSON.stringify(value);
-      if (s === undefined) return;
-      if (persistent) {
-        if (cache[key] === s) return;
-        cache[key] = s;
-        api.db.set(key, s);
-      } else { try { localStorage.setItem('nd.' + key, s); } catch {} }
+      if (s === undefined || cache[key] === s) return;
+      put(key, s);
     },
     // Tests only: put a raw (possibly damaged) string in place of a saved value.
-    _putRaw(key, s) { if (persistent) cache[key] = s; else localStorage.setItem('nd.' + key, s); },
+    _putRaw(key, s) { cache[key] = s; },
   };
 })();
+
+// Database unreachable: block the app with a clear notice and keep retrying.
+if (!store.persistent && window.api) {
+  const box = document.createElement('div');
+  box.className = 'dbdown';
+  box.innerHTML = '<div><h1>Can’t reach your saved data</h1><p>Nightdesk could not open its database, so it is not showing or saving anything until it can. Your data is safe on disk.</p><p class="dbdown-try">Trying again…</p><p class="dbdown-err"></p><button class="btn">Open data folder</button></div>';
+  box.querySelector('.dbdown-err').textContent = store.loadError;
+  box.querySelector('button').addEventListener('click', () => api.db.folder());
+  document.body.append(box);
+  let tries = 0;
+  setInterval(() => {
+    tries++;
+    try { const r = api.db.load(true); if (r && r.ok) location.reload(); else box.querySelector('.dbdown-try').textContent = `Trying again… (${tries})`; } catch {}
+  }, 2000);
+}
 
 const settings = Object.assign({
   theme: 'dark', palette: 'rose', h24: false, seconds: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
