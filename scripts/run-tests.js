@@ -24,7 +24,7 @@ const report = (name, ok, out) => {
   else if (/"checks"/.test(out)) console.log(out.match(/"checks": \d+/)[0]);
 };
 
-const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-notes.js', 'smoke-years.js', 'smoke-tz.js', 'smoke-focus.js', 'smoke-safety', 'smoke-persist'];
+const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-notes.js', 'smoke-years.js', 'smoke-tz.js', 'smoke-focus.js', 'smoke-screen.js', 'smoke-safety', 'smoke-persist'];
 for (const test of suites) {
   if (only && test !== only) continue;
   fs.rmSync(path.join(shots, 'profile'), { recursive: true, force: true });

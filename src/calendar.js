@@ -92,6 +92,7 @@ async function syncCalendar() {
 function renderCal() {
   const m = cal.month, events = allEvents(), today = ymd(new Date()), start = gridStart();
   $('#cal-title').textContent = m.toLocaleString('en', { month: 'long', year: 'numeric' });
+  $('#cal-pick').value = `${m.getFullYear()}-${pad(m.getMonth() + 1)}`;
   const st = $('#cal-status');
   st.className = 'status' + (cal.error ? ' err' : '');
   st.textContent = cal.error || (cal.connected ? `Google Calendar · synced ${cal.syncedAt ? fmtTime(cal.syncedAt) : ''}` : 'Saved on this PC · connect Google in Settings');
@@ -244,6 +245,7 @@ $('#cal-prev').addEventListener('click', () => moveMonth(-1));
 $('#cal-next').addEventListener('click', () => moveMonth(1));
 $('#cal-today').addEventListener('click', () => { cal.sel = ymd(new Date()); cal.month = new Date(new Date().getFullYear(), new Date().getMonth(), 1); syncCalendar(); });
 $('#cal-sync').addEventListener('click', syncCalendar);
+$('#cal-pick').addEventListener('change', (e) => { const [y, m] = e.target.value.split('-').map(Number); if (y && m) { cal.month = new Date(y, m - 1, 1); cal.sel = ymd(cal.month); resetEventForm(); renderCal(); syncCalendar(); } });
 $('#cal-dow').append(...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => h('span', {}, d)));
 on('gcal', syncCalendar);
 on('view', (v) => { if (v === 'calendar') renderCal(); });

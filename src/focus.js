@@ -73,14 +73,21 @@ function onForegroundWindow({ proc, title }) {
   }
 }
 
-// Watch the front window only while a focus block is running.
+// The front-window watcher runs while screen time is on, or during a focus block for the guard.
+let guardAsked = 0;
 function guardSync() {
-  const want = !!api && settings.guard !== false && pomo.running && pomo.mode === 'focus';
-  if (!want && guard.since) guardFlush();
-  if (want !== guard.watching) { guard.watching = want; api && api.focus.guard(want); }
+  const focusing = settings.guard !== false && pomo.running && pomo.mode === 'focus';
+  if (!focusing && guard.since) guardFlush();
+  const want = !!api && (focusing || settings.screenTime !== false);
+  // Ask again every 10 s while wanted, so a watcher that stopped for any reason is restarted.
+  if (want !== guard.watching || (want && Date.now() - guardAsked > 10000)) {
+    guard.watching = want; guardAsked = Date.now();
+    api && api.focus.guard(want);
+  }
 }
 
 if (api) api.focus.onWindow(onForegroundWindow);
-on('pomo', (ev) => { if (ev === 'start') guard.blockMs = 0; });
+// Starting focus while a distracting window is already in front counts from that moment.
+on('pomo', (ev) => { if (ev === 'start') { guard.blockMs = 0; if (typeof scr !== 'undefined' && scr.lastWin) setTimeout(() => onForegroundWindow(scr.lastWin), 0); } });
 
 setInterval(() => { sendMiniState(); guardSync(); }, 500);

@@ -16,6 +16,7 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Alarm** | One-off or repeating alarms. A ringing alarm freezes and blurs every monitor with **Snooze** and **Stop**, like a phone. |
 | **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, and side-by-side activity heatmaps for your study time, your GitHub contributions and your Codeforces submissions, plus a leaderboard of your best days. All on one screen. |
 | **Exams** | Give each subject an exam date and a chapter checklist with estimated hours (paste a whole syllabus at once). NightDesk works out how much to study per day to finish in time, can set it as your daily target, shows the next exam on the clock and in the calendar, and reminds you the day before. |
+| **Screen time** | While NightDesk runs, it notes which app or site is in front (YouTube in Chrome counts as YouTube) and sorts it into Study & work, Browsing, Communication, Entertainment, Social, Games or Other. A donut of the day, hour-by-hour bars, top apps, the last 7 days, a productivity score, app switches, your longest unbroken stretch and a comment from your pet. Pick any date to see that day, years back, together with what you studied. Only app and site names are saved, never window titles; idle and locked time is not counted. |
 | **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
 | **Calendar** | Month view with add, edit and delete. Double-click a day to fill it like a sticky note, or pick one of six pastel colours in the day panel; text stays readable on every colour. Local by default; two-way sync with Google Calendar once linked. |
 | **Notes** | Folders like iOS Notes and Notion-style pages: headings, lists, checklists, quotes and code, tags, a formatting bar, paste or drop images, search, pinning, duplicate, copy as Markdown and Recently Deleted. Images are stored as files next to your data and copied to the Documents backup. |
@@ -39,9 +40,9 @@ Also: light and dark themes, five accent colours, fullscreen (F11), starts with 
 |---|---|
 | ![Contests](docs/screenshots/contests.png) | ![Sounds](docs/screenshots/sounds.png) |
 
-| Alarms | Timer |
+| Screen time | Timer |
 |---|---|
-| ![Alarms](docs/screenshots/alarm.png) | ![Timer](docs/screenshots/timer.png) |
+| ![Screen time](docs/screenshots/screen.png) | ![Timer](docs/screenshots/timer.png) |
 
 Notes:
 

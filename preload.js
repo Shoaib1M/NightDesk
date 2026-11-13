@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('api', {
     guard: inv('guard:watch'),
     onWindow: (cb) => ipcRenderer.on('guard:window', (_e, w) => cb(w)),
     hotkeys: inv('hotkeys:status'),
+    idle: inv('sys:idle'),
     test: inv('focus:test'),
   },
   mini: {

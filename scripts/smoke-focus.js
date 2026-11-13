@@ -74,7 +74,8 @@
   await t('hotkey', 'mini'); await wait(400);
   check('Ctrl+Alt+M again hides it', (await t('info')).mini === false, null);
 
-  // ================= distraction guard
+  // ================= distraction guard (screen time off here, so the watcher runs for the guard alone)
+  settings.screenTime = false;
   check('Nightdesk itself never counts as a distraction', matchDistraction('Nightdesk', 'Nightdesk') === '', null);
   check('YouTube in a browser tab is caught', matchDistraction('chrome', 'Lofi beats - YouTube - Google Chrome') === 'YouTube', null);
   check('VS Code is fine', matchDistraction('Code', 'main.js - nightdesk - Visual Studio Code') === '', null);
@@ -97,7 +98,7 @@
   settings.guard = false; pomoSet('focus'); pomoToggle(); await wait(800);
   await t('fakeWindow', { proc: 'chrome', title: 'Netflix' }); await wait(300);
   check('switched off: nothing is caught', guard.since === 0 && (await t('info')).watching === false, guard.since);
-  pomoToggle(); settings.guard = true;
+  pomoToggle(); settings.guard = true; settings.screenTime = true;
 
   window.Notification = RealN;
   study.log = []; store.set('log', []);

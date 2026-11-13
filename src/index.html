@@ -151,6 +151,34 @@
     </div>
   </section>
 
+  <section class="view pad" id="v-screen">
+    <div class="scr">
+      <div class="card scr-left">
+        <div class="scr-head">
+          <h1>Screen time</h1>
+          <div class="row">
+            <button class="btn sm" id="scr-prev" aria-label="Previous day">&lsaquo;</button>
+            <span id="scr-day" class="scr-dayname"></span>
+            <button class="btn sm" id="scr-next" aria-label="Next day">&rsaquo;</button>
+            <input type="date" id="scr-pick" aria-label="Go to a day">
+          </div>
+        </div>
+        <div id="scr-donut" class="scr-donut"></div>
+        <div id="scr-legend" class="scr-legend"></div>
+        <div id="scr-studied" class="scr-studied"></div>
+        <p id="scr-insight" class="scr-insight"></p>
+      </div>
+      <div class="scr-right">
+        <div class="kpis" id="scr-kpis"></div>
+        <div class="card grow"><h3>Your day <small>hour by hour</small></h3><div class="bars scr-hours" id="scr-hours"></div></div>
+        <div class="two">
+          <div class="card"><h3>Top apps <small>and sites</small></h3><div id="scr-apps" class="scr-apps"></div></div>
+          <div class="card"><h3>Last 7 days <small>click a day</small></h3><div class="bars scr-week" id="scr-week"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="view pad" id="v-calendar">
     <div class="cal">
       <div class="cal-main">
@@ -159,6 +187,7 @@
           <span class="status" id="cal-status"></span>
           <div class="sp"></div>
           <button class="btn" id="cal-prev" aria-label="Previous month">&lsaquo;</button>
+          <input type="month" id="cal-pick" aria-label="Go to a month">
           <button class="btn" id="cal-today">Today</button>
           <button class="btn" id="cal-next" aria-label="Next month">&rsaquo;</button>
           <button class="btn" id="cal-sync">Sync</button>
@@ -279,6 +308,7 @@
 <script src="lamp.js"></script>
 <script src="exams.js"></script>
 <script src="focus.js"></script>
+<script src="screen.js"></script>
 <script src="quotes.js"></script>
 <script src="pet-sprite.js"></script>
 <script src="pet.js"></script>

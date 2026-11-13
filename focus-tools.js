@@ -3,7 +3,7 @@
 //  - the mini floating timer (a small always-on-top window)
 //  - global hotkeys that work from any app
 //  - the distraction guard's window watcher (which app is in front, only while focusing)
-const { BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
+const { BrowserWindow, globalShortcut, ipcMain, screen, powerMonitor } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const readline = require('readline');
@@ -126,6 +126,8 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
     return !!watcher;
   }
   handle('guard:watch', (on) => guard(!!on));
+  // 'active', 'idle' (no input for 2 minutes), 'locked' or 'unknown'
+  handle('sys:idle', () => powerMonitor.getSystemIdleState(120));
 
   // ---------- tests only
   if (SHOTS) {

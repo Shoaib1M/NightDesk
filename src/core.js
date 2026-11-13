@@ -111,7 +111,7 @@ if (!store.persistent && window.api) {
 }
 
 const settings = Object.assign({
-  theme: 'dark', palette: 'rose', h24: false, seconds: true, guard: true, examOnClock: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
+  theme: 'dark', palette: 'rose', h24: false, seconds: true, screenTime: true, guard: true, examOnClock: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
   cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
 }, store.get('settings', {}));
@@ -193,6 +193,7 @@ const ICON = {
   pet: '<circle cx="12" cy="15.5" r="3.5"/><circle cx="5.5" cy="10.5" r="1.8"/><circle cx="9.5" cy="6" r="1.8"/><circle cx="14.5" cy="6" r="1.8"/><circle cx="18.5" cy="10.5" r="1.8"/>',
   notes: '<path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12.5h7M9 16.5h5"/>',
   mini: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10v4M10.5 10v4M14 12h3"/>',
+  screen: '<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/><path d="M12 7.5v3.2l2 1.3"/>',
   sound: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
   buddy: '<path d="M5 4l3 4h8l3-4v9a7 7 0 0 1-14 0zM9.5 12v1M14.5 12v1M11 16h2"/>',
   quote: '<path d="M10 7H6a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4M19 7h-4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4"/>',
@@ -211,7 +212,7 @@ const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 // ---------- navigation
 const VIEWS = [
   ['clock', 'Clock'], ['focus', 'Focus'], ['timer', 'Timer'], ['stopwatch', 'Stopwatch'], ['alarm', 'Alarm'],
-  ['study', 'Study'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
+  ['study', 'Study'], ['screen', 'Screen'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
 ];
 
 function showView(id) {
@@ -360,6 +361,7 @@ async function openSettings() {
     h('h3', {}, 'Alarms'),
     row('Snooze length', 'minutes', num('snoozeMin', 1, 60)),
     h('h3', {}, 'Focus tools'),
+    row('Screen time tracking', 'Counts which app or site is in front while NightDesk runs. Only app names are saved, never window titles. Idle and locked time is not counted', sw('screenTime')),
     row('Distraction guard', 'During a focus block, time on these apps and sites is not counted and your pet nudges you', sw('guard')),
     (() => {
       const i = h('input', { type: 'text', spellcheck: 'false', 'aria-label': 'Distracting apps and sites' });
@@ -522,6 +524,7 @@ window.__shot = (step) => {
   for (const part of step.split(':')) {
     if (part === 'light' || part === 'dark') { settings.theme = part; applyTheme(); }
     else if (part === 'settings') openSettings();
+    else if (part === 'screendemo') { screenDemo(); renderScreen(); }
     else if (part === 'fills') { const t = new Date(); [['yellow', 0], ['pink', 2], ['mint', 3], ['sky', 6], ['lilac', 9], ['peach', 11], ['yellow', 13]].forEach(([c, n]) => { const all = dayFills(); all[ymd(addDays(t, n))] = c; store.set('dayFills', all); }); saveEvent({ title: 'Codeforces practice', allDay: true, start: ymd(t), end: ymd(addDays(t, 1)) }, null).then(renderCal); }
     else if (part === 'datasec') setTimeout(() => { const h3 = [...document.querySelectorAll('#sheet h3')].find((x) => x.textContent === 'Your data'); if (h3) h3.scrollIntoView(); }, 900);
     else if (part === 'sound') toggleSoundPop(true);
