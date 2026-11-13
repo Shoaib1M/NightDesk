@@ -1,5 +1,12 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, nativeTheme, powerSaveBlocker, powerMonitor, net, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, nativeTheme, powerSaveBlocker, powerMonitor, net, screen, desktopCapturer, protocol } = require('electron');
+const crypto = require('crypto');
+const { pathToFileURL } = require('url');
+
+// Images in Notes are files in <data>\notes-images, shown through ndimg://img/<sha1>.<ext>.
+protocol.registerSchemesAsPrivileged([{ scheme: 'ndimg', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+const NOTE_IMG_NAME = /^[a-f0-9]{40}\.(png|jpg|gif|webp)$/;
+const noteImagesDir = () => path.join(app.getPath('userData'), 'notes-images');
 const path = require('path');
 const fs = require('fs');
 const gcal = require('./gcal');
@@ -117,7 +124,7 @@ function createWindow() {
   win.webContents.on('will-navigate', (e) => e.preventDefault());
 
   if (!app.isPackaged) {
-    win.webContents.on('console-message', (e) => console.log('[renderer]', e.message));
+    win.webContents.on('console-message', (e) => console.log('[renderer]', e.message, e.level === 'error' ? `(${String(e.sourceId).split('/').pop()}:${e.lineNumber})` : ''));
     win.webContents.on('before-input-event', (_e, input) => {
       if (input.type === 'keyDown' && input.key === 'F12') win.webContents.toggleDevTools();
     });
@@ -148,6 +155,9 @@ function createWindow() {
 
 async function shoot() {
   fs.mkdirSync(SHOTS, { recursive: true });
+  // Hidden windows stop repainting, so later screenshots would be stale. NIGHTDESK_SHOW=1 shows the
+  // window (without focusing it) for screenshot runs; tests stay hidden by default.
+  if (process.env.NIGHTDESK_SHOW) win.showInactive();
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const steps = (process.env.NIGHTDESK_STEPS || 'clock,focus,timer,stopwatch,calendar,contests,lamp').split(',');
   await wait(2500);
@@ -499,6 +509,21 @@ function registerIpc() {
     return clean((await res.json()).map((x) => [x.quote, x.author]));
   });
 
+  // Saves a pasted or dropped image once (named by its content) and copies it to the Documents backup.
+  handle('notes:saveImage', (bytes, type) => {
+    const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[type];
+    if (!ext) throw new Error('Unsupported image type.');
+    const buf = Buffer.from(bytes);
+    if (!buf.length || buf.length > 25 * 1024 * 1024) throw new Error('Image is empty or over 25 MB.');
+    const name = crypto.createHash('sha1').update(buf).digest('hex') + '.' + ext;
+    fs.mkdirSync(noteImagesDir(), { recursive: true });
+    const out = path.join(noteImagesDir(), name);
+    if (!fs.existsSync(out)) { fs.writeFileSync(out + '.tmp', buf); fs.renameSync(out + '.tmp', out); }
+    const mirror = db.mirrorFolder();
+    if (mirror) { try { const md = path.join(mirror, 'notes-images'); fs.mkdirSync(md, { recursive: true }); if (!fs.existsSync(path.join(md, name))) fs.copyFileSync(out, path.join(md, name)); } catch (err) { logError('image mirror', err); } }
+    return 'ndimg://img/' + name;
+  });
+
   handle('pet:desktop', (on) => setDesktopPet(!!on));
   registerPetIpc();
 
@@ -544,6 +569,15 @@ if (!firstCopy || process.argv.includes('--quit')) {
   app.on('window-all-closed', () => app.quit());
 
   app.whenReady().then(() => {
+    // Note images: served from the data folder, or from the Documents copy if the local file is gone.
+    protocol.handle('ndimg', (req) => {
+      const name = new URL(req.url).pathname.slice(1);
+      if (!NOTE_IMG_NAME.test(name)) return new Response('', { status: 404 });
+      let file = path.join(noteImagesDir(), name);
+      const mirror = db.mirrorFolder();
+      if (!fs.existsSync(file) && mirror && fs.existsSync(path.join(mirror, 'notes-images', name))) file = path.join(mirror, 'notes-images', name);
+      return fs.existsSync(file) ? net.fetch(pathToFileURL(file).toString()) : new Response('', { status: 404 });
+    });
     loadPrefs();
     applyMirror();
     // After the PC wakes up: ring alarms that came due while it slept, refresh calendars.

@@ -29,10 +29,48 @@ function eventsOn(events, day) {
   return events.filter((e) => e.start < next && (e.end > day || (+e.end === +e.start && e.start >= day)));
 }
 
+// ---------- keeping Google connected
+// The app renews Google access by itself for as long as the login lasts. Google ends logins of apps
+// still in "Testing" after 7 days, and only the user can approve a new one, so: a reminder on day 6,
+// an alert if it signs out, and a one-click Reconnect. A login that outlives 7 days belongs to a
+// published app and lasts for good, so the reminders stop.
+const GOOGLE_TEST_LIMIT = 7 * 864e5;
+function googleReminder(st, now = Date.now()) {
+  cal.remindReconnect = false;
+  if (!st || !st.configured) return '';
+  const today = ymd(new Date(now));
+  if (!st.connected) {
+    if (store.get('gcalOutNotified', '') !== today) {
+      store.set('gcalOutNotified', today);
+      notify('Google Calendar signed out', 'Open Nightdesk → Calendar and press Reconnect. It takes one click.');
+      buddySay('Google Calendar signed out. Press Reconnect on the Calendar tab.', 15000);
+      return 'signed-out';
+    }
+    return '';
+  }
+  if (store.get('gcalLasting', false) || !(st.connectedAt > 0)) return '';
+  const age = now - st.connectedAt;
+  if (age > GOOGLE_TEST_LIMIT + 12 * 3600000) { store.set('gcalLasting', true); return 'lasting'; }
+  if (age > 6 * 864e5) {
+    cal.remindReconnect = true;
+    if (store.get('gcalRemindDay', '') !== today) {
+      store.set('gcalRemindDay', today);
+      const ends = new Date(st.connectedAt + GOOGLE_TEST_LIMIT).toLocaleString('en', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      notify('Reconnect Google Calendar today', `Google may sign Nightdesk out around ${ends}. Open Calendar → Reconnect (one click), or publish your Google Cloud app to stop this for good.`);
+      buddySay(`Google Calendar needs a quick reconnect before ${ends}. Calendar tab → Reconnect.`, 15000);
+      return 'reminded';
+    }
+  }
+  return '';
+}
+
 async function syncCalendar() {
   if (api) {
     try {
-      cal.connected = (await call(api.gcal.status())).connected;
+      const gst = await call(api.gcal.status());
+      cal.gst = gst;
+      cal.connected = gst.connected;
+      googleReminder(gst);
       if (cal.connected) {
         const from = gridStart(), to = addDays(from, 42), now = new Date(), soon = addDays(now, 30);
         const ranges = [[from, to]];
@@ -57,12 +95,15 @@ function renderCal() {
   st.className = 'status' + (cal.error ? ' err' : '');
   st.textContent = cal.error || (cal.connected ? `Google Calendar · synced ${cal.syncedAt ? fmtTime(cal.syncedAt) : ''}` : 'Saved on this PC · connect Google in Settings');
   // If Google ever signs out, one click reconnects with the saved credentials (just approve in the browser).
+  const signedOut = !!(cal.gst && cal.gst.configured && !cal.gst.connected);
+  if (signedOut && !cal.error) st.textContent = 'Google Calendar signed out · press Reconnect';
+  if (cal.remindReconnect && !cal.error) st.textContent = `Google Calendar · reconnect before ${new Date(cal.gst.connectedAt + GOOGLE_TEST_LIMIT).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`;
   let rc = $('#cal-reconnect');
-  if (cal.error && /expired|sign.?in/i.test(cal.error)) {
+  if ((cal.error && /expired|sign.?in/i.test(cal.error)) || signedOut || cal.remindReconnect) {
     if (!rc) {
       rc = h('button', { class: 'btn sm pri', id: 'cal-reconnect', onclick: async () => {
         rc.disabled = true; rc.textContent = 'Approve in your browser…';
-        try { await call(api.gcal.connect({})); cal.error = ''; syncCalendar(); } catch (err) { toast(err.message); }
+        try { await call(api.gcal.connect({})); cal.error = ''; store.set('gcalRemindDay', ''); syncCalendar(); } catch (err) { toast(err.message); }
         rc.disabled = false; rc.textContent = 'Reconnect';
       } }, 'Reconnect');
       st.after(rc);

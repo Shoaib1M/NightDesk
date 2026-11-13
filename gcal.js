@@ -37,7 +37,9 @@ const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g
 
 function status() {
   const s = load();
-  return { configured: !!(s.clientId && s.clientSecret), connected: !!s.refreshToken };
+  // Logins from before this was recorded count from now, so the reminder errs on the early side.
+  if (s.refreshToken && !s.connectedAt && state) { s.connectedAt = Date.now(); try { save(); } catch {} }
+  return { configured: !!(s.clientId && s.clientSecret), connected: !!s.refreshToken, connectedAt: s.connectedAt || 0 };
 }
 
 async function tokenRequest(params) {
@@ -104,6 +106,7 @@ function connect(creds = {}) {
         Object.assign(s, {
           clientId, clientSecret,
           refreshToken: tok.refresh_token,
+          connectedAt: Date.now(),
           accessToken: tok.access_token,
           expiresAt: Date.now() + (tok.expires_in || 3600) * 1000,
         });
@@ -134,7 +137,7 @@ function connect(creds = {}) {
 
 function disconnect() {
   const s = load();
-  delete s.refreshToken; delete s.accessToken; delete s.expiresAt;
+  delete s.refreshToken; delete s.accessToken; delete s.expiresAt; delete s.connectedAt;
   save();
   return status();
 }

@@ -17,6 +17,7 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, and side-by-side activity heatmaps for your study time, your GitHub contributions and your Codeforces submissions, plus a leaderboard of your best days. All on one screen. |
 | **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
 | **Calendar** | Month view with add, edit and delete. Double-click a day to fill it like a sticky note, or pick one of six pastel colours in the day panel; text stays readable on every colour. Local by default; two-way sync with Google Calendar once linked. |
+| **Notes** | Folders like iOS Notes and Notion-style pages: headings, lists, checklists, quotes and code, tags, a formatting bar, paste or drop images, search, pinning, duplicate, copy as Markdown and Recently Deleted. Images are stored as files next to your data and copied to the Documents backup. |
 | **Contests** | Upcoming Codeforces rounds with division filters, add-to-calendar and a reminder 30 minutes before. |
 | **Lamp** | The whole window as one solid colour with presets, any custom colour and brightness. Made for using a second monitor as a light. |
 | **Sounds** | Nine synthesised sounds you can layer: white, pink, brown, study, rain, ocean, cabin, fireplace, binaural focus beats. Spotify now-playing and controls once linked. |
@@ -40,6 +41,10 @@ Also: light and dark themes, five accent colours, fullscreen (F11), starts with 
 | Alarms | Light theme |
 |---|---|
 | ![Alarms](docs/screenshots/alarm.png) | ![Focus, light theme](docs/screenshots/focus-light.png) |
+
+Notes:
+
+![Notes](docs/screenshots/notes.png)
 
 The desktop pet: ![Desktop pet](docs/screenshots/desktop-pet.png)
 
@@ -78,8 +83,9 @@ Nothing here is required. Both are set up once in **Settings** (gear icon), and 
 2. **APIs & Services → Library** → enable **Google Calendar API**.
 3. **Google Auth Platform** → set up the consent screen as **External** and add your own Gmail under **Audience → Test users**.
 4. **Clients → Create client** → application type **Desktop app**.
-5. **Audience → Publish app.** In *Testing* mode Google signs you out every 7 days; published, the connection lasts. When you sign in, Google warns the app is unverified: choose **Advanced → Go to the app** (it is your own app).
-6. Paste the Client ID and Client secret into Settings and press **Connect**. They are saved, and if Google ever does sign you out, the Calendar tab shows a one-click **Reconnect**.
+5. **Branding:** set the home page to your project page (for example the GitHub repo), the privacy policy to [PRIVACY.md](PRIVACY.md) on GitHub, and add `github.com` under Authorized domains. Leave the logo empty (a logo makes Google require a full review).
+6. **Audience → Publish app → Confirm.** In *Testing* mode Google signs you out every 7 days; published, the login lasts. When you sign in, Google warns the app is unverified: choose **Advanced → Go to the app** (it is your own app).
+7. Paste the Client ID and Client secret into Settings and press **Connect**. They are saved, and if Google ever does sign you out, the Calendar tab shows a one-click **Reconnect**. While the app is still in Testing, NightDesk reminds you on day 6 (notification, pet and a Reconnect button); once a login outlives 7 days the reminders stop for good.
 
 ### Spotify (now playing and controls)
 

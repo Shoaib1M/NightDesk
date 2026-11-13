@@ -186,6 +186,7 @@ const ICON = {
   contests: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>',
   lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   pet: '<circle cx="12" cy="15.5" r="3.5"/><circle cx="5.5" cy="10.5" r="1.8"/><circle cx="9.5" cy="6" r="1.8"/><circle cx="14.5" cy="6" r="1.8"/><circle cx="18.5" cy="10.5" r="1.8"/>',
+  notes: '<path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12.5h7M9 16.5h5"/>',
   sound: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
   buddy: '<path d="M5 4l3 4h8l3-4v9a7 7 0 0 1-14 0zM9.5 12v1M14.5 12v1M11 16h2"/>',
   quote: '<path d="M10 7H6a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4M19 7h-4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4"/>',
@@ -204,7 +205,7 @@ const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 // ---------- navigation
 const VIEWS = [
   ['clock', 'Clock'], ['focus', 'Focus'], ['timer', 'Timer'], ['stopwatch', 'Stopwatch'], ['alarm', 'Alarm'],
-  ['study', 'Study'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['contests', 'Contests'], ['lamp', 'Lamp'],
+  ['study', 'Study'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
 ];
 
 function showView(id) {
@@ -265,7 +266,7 @@ addEventListener('keydown', (e) => {
     else if (api) api.app.fullscreen(false);
     return;
   }
-  if (e.target.matches('input, button, select') || e.ctrlKey || e.altKey || e.metaKey || !$('#modal').hidden) return;
+  if ((e.target.matches && e.target.matches('input, button, select, [contenteditable]')) || e.ctrlKey || e.altKey || e.metaKey || !$('#modal').hidden) return;
   if (e.key >= '1' && e.key <= String(VIEWS.length)) showView(VIEWS[+e.key - 1][0]);
   if (e.key === ' ') { e.preventDefault(); emit('space', settings.view); }
   if (e.key === 'ArrowRight') emit('arrow', 1);

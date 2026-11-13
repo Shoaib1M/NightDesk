@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
     onResult: (cb) => ipcRenderer.on('alarm:result', (_e, action) => cb(action)),
   },
   quotes: { fetch: inv('quotes:fetch') },
+  notes: { saveImage: inv('notes:saveImage') },
   pet: {
     desktop: inv('pet:desktop'),
     state: (s) => ipcRenderer.send('pet:state', s),
