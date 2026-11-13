@@ -89,6 +89,7 @@ function renderStudy() {
         h('button', { class: 'btn sm danger', 'aria-label': 'Delete subject', onclick: () => {
           if (confirm(`Delete "${s.name}"? Logged hours are kept.`)) { study.subjects = study.subjects.filter((x) => x !== s); saveSubjects(); }
         } }, '✕')));
+    if (typeof subjectExtras === 'function') el.append(subjectExtras(s));
     el.style.setProperty('--c', s.color);
     return el;
   }));

@@ -22,6 +22,7 @@ function allEvents() {
       out.push({ id: 'cf' + c.id, src: 'cf', title: c.name, start: new Date(c.start), end: new Date(c.start + c.duration), allDay: false, color: '#e0a040', editable: false, url: `https://codeforces.com/contests/${c.id}` });
     }
   }
+  if (typeof examEvents === 'function') out.push(...examEvents());
   return out.sort((a, b) => a.start - b.start);
 }
 function eventsOn(events, day) {
@@ -130,7 +131,7 @@ function renderCal() {
   $('#day-list').replaceChildren(...todays.map((e) => {
     const el = h('div', { class: 'ev' },
       h('div', { class: 't' }, e.title),
-      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces' }[e.src]),
+      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces', exam: 'Exam' }[e.src]),
       h('div', { class: 'a' },
         e.editable && h('button', { class: 'btn sm', onclick: () => editEvent(e) }, 'Edit'),
         e.editable && h('button', { class: 'btn sm danger', onclick: () => deleteEvent(e) }, 'Delete'),

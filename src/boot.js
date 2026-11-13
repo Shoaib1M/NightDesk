@@ -16,8 +16,12 @@ renderQuote();
 
 setInterval(() => { tickClock(); tickPomo(); tickTimer(); tickAlarms(); tickQuote(); }, 250);
 setInterval(buddyTick, 700);
+renderClockExam();
+examReminders();
 setInterval(() => {
   contestReminders();
+  examReminders();
+  renderClockExam();
   if (settings.view === 'contests') renderContests();
   if (settings.view === 'alarm') renderAlarms();
 }, 30000);

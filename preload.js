@@ -33,6 +33,19 @@ contextBridge.exposeInMainWorld('api', {
     onResult: (cb) => ipcRenderer.on('alarm:result', (_e, action) => cb(action)),
   },
   quotes: { fetch: inv('quotes:fetch') },
+  focus: {
+    miniState: (s) => ipcRenderer.send('mini:state', s),
+    mini: inv('mini:toggle'),
+    onCmd: (cb) => ipcRenderer.on('focus:cmd', (_e, c) => cb(c)),
+    guard: inv('guard:watch'),
+    onWindow: (cb) => ipcRenderer.on('guard:window', (_e, w) => cb(w)),
+    hotkeys: inv('hotkeys:status'),
+    test: inv('focus:test'),
+  },
+  mini: {
+    onState: (cb) => ipcRenderer.on('mini:state', (_e, s) => cb(s)),
+    cmd: (c) => ipcRenderer.send('mini:cmd', c),
+  },
   notes: { saveImage: inv('notes:saveImage') },
   pet: {
     desktop: inv('pet:desktop'),

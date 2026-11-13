@@ -111,7 +111,7 @@ if (!store.persistent && window.api) {
 }
 
 const settings = Object.assign({
-  theme: 'dark', palette: 'rose', h24: false, seconds: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
+  theme: 'dark', palette: 'rose', h24: false, seconds: true, guard: true, examOnClock: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
   cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
 }, store.get('settings', {}));
@@ -192,6 +192,7 @@ const ICON = {
   lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   pet: '<circle cx="12" cy="15.5" r="3.5"/><circle cx="5.5" cy="10.5" r="1.8"/><circle cx="9.5" cy="6" r="1.8"/><circle cx="14.5" cy="6" r="1.8"/><circle cx="18.5" cy="10.5" r="1.8"/>',
   notes: '<path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12.5h7M9 16.5h5"/>',
+  mini: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10v4M10.5 10v4M14 12h3"/>',
   sound: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
   buddy: '<path d="M5 4l3 4h8l3-4v9a7 7 0 0 1-14 0zM9.5 12v1M14.5 12v1M11 16h2"/>',
   quote: '<path d="M10 7H6a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4M19 7h-4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3c0 2-1 3.5-3 4"/>',
@@ -242,6 +243,7 @@ function buildChrome() {
     // Quotes are an overlay for the Clock view.  Toggling them must not throw the
     // user out of whichever tool they are currently using.
     ib('b-quote', 'quote', 'Quotes on / off', () => { settings.quotes = !settings.quotes; saveSettings(); emit('settings'); }),
+    ib('b-mini', 'mini', 'Mini floating timer (Ctrl+Alt+M)', () => api && api.focus.mini()),
     ib('b-buddy', 'buddy', 'Study buddy on / off', () => { settings.buddy = !settings.buddy; saveSettings(); emit('settings'); }),
     ib('b-theme', 'sun', 'Light / dark', () => { settings.theme = settings.theme === 'dark' ? 'light' : 'dark'; saveSettings(); applyTheme(); }),
     ib('b-full', 'full', 'Fullscreen (F11)', () => api && api.app.fullscreen()),
@@ -341,6 +343,7 @@ async function openSettings() {
     row('Colour', null, pal),
     row('24-hour clock', null, sw('h24')),
     row('Show seconds', null, sw('seconds')),
+    row('Exam countdown on the clock', 'Small line in the top-left corner', sw('examOnClock')),
     row('Flip sound', 'A soft click each time the clock flips', sw('flipSound')),
     row('Study pet', 'More options on the Pet tab', sw('buddy')),
     row('Quotes on the clock', 'Click the quote or use the arrow keys to cycle', sw('quotes')),
@@ -356,6 +359,15 @@ async function openSettings() {
     row('Start the next block automatically', null, sw('autoStart')),
     h('h3', {}, 'Alarms'),
     row('Snooze length', 'minutes', num('snoozeMin', 1, 60)),
+    h('h3', {}, 'Focus tools'),
+    row('Distraction guard', 'During a focus block, time on these apps and sites is not counted and your pet nudges you', sw('guard')),
+    (() => {
+      const i = h('input', { type: 'text', spellcheck: 'false', 'aria-label': 'Distracting apps and sites' });
+      i.value = settings.guardList || DEFAULT_GUARD;
+      i.addEventListener('change', () => { settings.guardList = i.value.trim() || DEFAULT_GUARD; i.value = settings.guardList; saveSettings(); });
+      return h('label', { class: 'srow' }, h('span', {}, 'Counts as distracting', h('small', {}, 'Comma separated; matched against window titles and app names')), i);
+    })(),
+    h('div', { class: 'srow' }, h('span', {}, 'Hotkeys (work in any app)', h('small', {}, 'Ctrl+Alt+F start/pause focus · Ctrl+Alt+M mini timer · Ctrl+Alt+N open Nightdesk')), ''),
   );
 
   // Windows

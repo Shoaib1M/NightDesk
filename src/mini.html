@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>Nightdesk timer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+  .box { position: absolute; inset: 4px; border-radius: 16px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px;
+    background: #141416; color: #ececee; border: 1px solid #2c2c31; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); -webkit-app-region: drag; }
+  body.light .box { background: #ffffff; color: #1c1c1e; border-color: #e2dfd9; }
+  .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .mode { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--accent, #d98a7c); }
+  .time { font-size: 26px; font-weight: 300; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .label { font-size: 11px; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .paused .time { opacity: .55; }
+  button { -webkit-app-region: no-drag; width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; padding: 0; opacity: .8; }
+  button:hover { background: rgba(127, 127, 127, .18); opacity: 1; }
+  button svg { width: 17px; height: 17px; }
+  .bar { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 2px; border-radius: 1px; background: rgba(127, 127, 127, .25); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent, #d98a7c); }
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="info">
+    <span class="mode" id="mode">FOCUS</span>
+    <span class="time" id="time">--:--</span>
+    <span class="label" id="label"></span>
+  </div>
+  <button id="toggle" title="Start / pause (Ctrl+Alt+F)" aria-label="Start or pause"></button>
+  <button id="skip" title="Skip to the next block" aria-label="Skip"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5l9 7-9 7zM16 5h2.5v14H16z"/></svg></button>
+  <button id="open" title="Open Nightdesk (Ctrl+Alt+N)" aria-label="Open Nightdesk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+  <button id="close" title="Hide (Ctrl+Alt+M)" aria-label="Hide mini timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="bar"><i id="bar"></i></div>
+</div>
+<script src="mini.js"></script>
+</body>
+</html>

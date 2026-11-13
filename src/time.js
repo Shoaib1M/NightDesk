@@ -71,7 +71,10 @@ const breakMs = () => (longBreakNext() ? settings.longMin : settings.breakMin) *
 
 function pomoLogFocus() {
   if (pomo.mode !== 'focus') return;
-  logStudy(Math.floor((pomo.dur - Math.max(0, pomo.left)) / 60000), $('#p-subj').value);
+  // Time spent on distractions during this block (distraction guard) is not counted as study.
+  let away = 0;
+  if (typeof guard !== 'undefined') { guardFlush(); away = guard.blockMs; guard.blockMs = 0; }
+  logStudy(Math.floor((pomo.dur - Math.max(0, pomo.left) - away) / 60000), $('#p-subj').value);
 }
 function pomoSet(mode) {
   pomo.mode = mode;
@@ -140,7 +143,9 @@ function renderPomo() {
   $$('#pomo .prog').forEach((c) => { c.style.strokeDashoffset = 565.49 * (1 - frac); });
   $('#p-go').textContent = pomo.running ? 'Pause' : pomo.left < pomo.dur ? 'Resume' : 'Start';
   const st = studyStats();
-  $('#p-info').textContent = `Round ${pomo.round} · ${fmtDur(st.today)} studied today · ${st.streak} day streak`;
+  const away = typeof distractedToday === 'function' ? distractedToday() : [];
+  const awayMs = away.reduce((a, [, ms]) => a + ms, 0);
+  $('#p-info').textContent = `Round ${pomo.round} · ${fmtDur(st.today)} studied today · ${st.streak} day streak` + (awayMs >= 60000 ? ` · ${fmtDur(Math.round(awayMs / 60000))} distracted (${away[0][0]})` : '');
   document.title = pomo.running ? `${fmtMs(pomo.left)} ${focus ? 'Focus' : 'Break'} · Nightdesk` : 'Nightdesk';
 }
 

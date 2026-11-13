@@ -528,3 +528,22 @@ main { position: fixed; inset: 0; }
   .notes { grid-template-columns: 170px 240px 1fr; }
   .note-doc { padding: 34px 32px 40vh 56px; }
 }
+
+/* ---------- exams and syllabus */
+.subj-exam { display: flex; align-items: center; gap: 8px; text-align: left; font-size: 12px; color: var(--muted); background: none; border: 0; padding: 2px 0 0; cursor: pointer; }
+.subj-exam:hover { color: var(--text); }
+.subj-exam.soon { color: var(--c); font-weight: 600; }
+.syl-bar { width: 46px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; flex: none; }
+.syl-bar i { display: block; height: 100%; background: var(--c); }
+.syl-sum { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; margin: 8px 0 4px; border-radius: 12px; background: var(--card2); font-size: 13px; }
+.chap-list { display: flex; flex-direction: column; gap: 4px; max-height: 42vh; overflow-y: auto; }
+.chap { display: flex; align-items: center; gap: 8px; padding: 4px 2px; }
+.chap input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); flex: none; margin: 0; }
+.chap .chap-name { flex: 1; height: 30px !important; }
+.chap.done .chap-name { text-decoration: line-through; color: var(--muted); }
+.chap .step b { min-width: 44px; }
+.chap-add { margin-top: 10px; align-items: stretch !important; }
+.chap-add textarea { flex: 1; resize: vertical; min-height: 38px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); font: inherit; color: inherit; outline: none; }
+.exam-count { position: absolute; top: 20px; left: 24px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.exam-count b { color: var(--text); font-weight: 600; }
+.exam-count .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
