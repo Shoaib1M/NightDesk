@@ -38,9 +38,9 @@ Also: light and dark themes, five accent colours, fullscreen (F11), starts with 
 |---|---|
 | ![Contests](docs/screenshots/contests.png) | ![Sounds](docs/screenshots/sounds.png) |
 
-| Alarms | Light theme |
+| Alarms | Timer |
 |---|---|
-| ![Alarms](docs/screenshots/alarm.png) | ![Focus, light theme](docs/screenshots/focus-light.png) |
+| ![Alarms](docs/screenshots/alarm.png) | ![Timer](docs/screenshots/timer.png) |
 
 Notes:
 
