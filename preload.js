@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
     set: (key, value) => ipcRenderer.send('db:set', key, value),
     backup: inv('db:backup'),
     backups: inv('db:backups'),
+    check: inv('db:check'),
     list: inv('db:list'),
     restore: inv('db:restore'),
     mirror: inv('db:mirror'),

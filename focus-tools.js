@@ -60,6 +60,7 @@ module.exports = function focusTools({ app, getWin, prefs, savePrefs, handle, lo
       skipTaskbar: true, alwaysOnTop: true, focusable: false, show: false, title: 'Nightdesk timer', backgroundColor: '#00000000', transparent: true, hasShadow: false,
       webPreferences: { preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
     });
+    mini.webContents.on('render-process-gone', () => { if (alive()) mini.reload(); });
     mini.setAlwaysOnTop(true, 'floating');
     mini.loadFile(path.join(srcDir, 'mini.html'));
     mini.webContents.once('did-finish-load', () => {

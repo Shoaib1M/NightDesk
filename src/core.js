@@ -394,6 +394,13 @@ async function openSettings() {
     ? 'Everything is saved instantly to a local database on this PC. A backup is made every day and kept forever.'
     : 'The database could not be opened, so data is being kept in browser storage for now.');
   if (api && store.persistent) call(api.db.backups()).then((n) => { dataNote.textContent += ` ${n} daily backup${n === 1 ? '' : 's'} saved so far.`; }).catch(() => {});
+  // Weekly proof that the backups really work (one is unpacked and checked in full).
+  if (api && store.persistent && api.db.check) call(api.db.check()).then((c) => {
+    if (!c) return;
+    const when = new Date(c.at).toLocaleDateString('en', { day: 'numeric', month: 'short' });
+    if (c.ok) dataNote.append(h('span', { class: 'check-ok' }, ` ✓ Backups verified ${when}.`));
+    else dataNote.append(h('span', { class: 'check-bad' }, ` ⚠ Backup check failed ${when}: ${c.note}. Your live data is untouched — tell Claude.`));
+  }).catch(() => {});
   sheet.append(
     h('h3', {}, 'Your data'),
     h('div', { class: 'srow' }, h('span', {}, 'Saved on this PC', dataNote),

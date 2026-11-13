@@ -589,3 +589,6 @@ main { position: fixed; inset: 0; }
 .scr-apps .ab i { display: block; height: 100%; border-radius: 4px; }
 .scr-apps b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cal-head input[type=month] { height: 34px; width: 150px; }
+
+.check-ok { color: #3f9a6a; }
+.check-bad { color: #d4533b; font-weight: 600; }

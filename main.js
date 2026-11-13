@@ -151,6 +151,10 @@ function createWindow() {
   win.on('hide', applyAwake);
   // If the page ever crashes or hangs, bring it back instead of leaving a dead window.
   win.webContents.on('render-process-gone', (_e, d) => { logError('page crashed', d && d.reason); if (win && !win.isDestroyed()) win.reload(); });
+  // A page frozen for 20 s straight is reloaded. Data is safe: every change is already in the database.
+  let hung = null;
+  win.on('unresponsive', () => { clearTimeout(hung); hung = setTimeout(() => { if (win && !win.isDestroyed()) { logError('page frozen for 20 s, reloading'); win.webContents.forcefullyCrashRenderer(); } }, 20000); });
+  win.on('responsive', () => clearTimeout(hung));
 
   if (SHOTS) win.webContents.once('did-finish-load', () => shoot().catch((err) => { console.error(err); app.exit(1); }));
 }
@@ -254,6 +258,7 @@ function setDesktopPet(on) {
     skipTaskbar: true, hasShadow: false, focusable: false, show: false, title: 'Nightdesk pet',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
+  petWin.webContents.on('render-process-gone', (_e, d) => { logError('pet crashed', d && d.reason); if (petWin && !petWin.isDestroyed()) petWin.reload(); });
   petWin.setAlwaysOnTop(true, 'floating');
   petWin.loadFile(path.join(__dirname, 'src', 'pet-desktop.html'));
   petWin.webContents.once('did-finish-load', () => {
@@ -427,6 +432,7 @@ function registerDbIpc() {
   });
   handle('db:backup', () => db.backupNow());
   handle('db:backups', () => db.backupCount());
+  handle('db:check', () => db.lastCheck() || db.selfCheck(true));
   handle('db:list', () => db.backups());
   handle('db:restore', async (name) => {
     const r = db.restore(name);
@@ -599,6 +605,7 @@ if (!firstCopy || process.argv.includes('--quit')) {
     const tools = focusTools({ app, getWin: () => (win && !win.isDestroyed() ? win : null), prefs, savePrefs, handle, logError, SHOTS, showWindow, preload: path.join(__dirname, 'preload.js'), srcDir: path.join(__dirname, 'src') });
     createWindow();
     // A copy of the database every day, even if the app runs for days without restarting.
+    setTimeout(() => db.backupIfDue(), 60000); // first check a minute after start, then every 30 min
     setInterval(() => db.backupIfDue(), 30 * 60000);
     if (!SHOTS) createTray();
     tools.start();

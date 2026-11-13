@@ -24,10 +24,15 @@ const report = (name, ok, out) => {
   else if (/"checks"/.test(out)) console.log(out.match(/"checks": \d+/)[0]);
 };
 
-const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-notes.js', 'smoke-years.js', 'smoke-tz.js', 'smoke-focus.js', 'smoke-screen.js', 'smoke-safety', 'smoke-persist'];
+const suites = ['smoke.js', 'smoke-quotes.js', 'smoke-edge.js', 'smoke-pet.js', 'smoke-deskpet.js', 'smoke-activity.js', 'smoke-visual.js', 'smoke-dayfill.js', 'smoke-notes.js', 'smoke-years.js', 'smoke-tz.js', 'smoke-focus.js', 'smoke-screen.js', 'smoke-safety', 'smoke-persist', 'test-backups.js', 'test-migrate.js'];
 for (const test of suites) {
   if (only && test !== only) continue;
   fs.rmSync(path.join(shots, 'profile'), { recursive: true, force: true });
+  if (test.startsWith('test-')) { // plain Node unit tests, no app window
+    const r = spawnSync(process.execPath, ['--no-warnings', path.join(__dirname, test)], { encoding: 'utf8', timeout: 300000 });
+    const out = (r.stdout || '') + (r.stderr || '');
+    report(test, r.status === 0 && !/FAIL/.test(out), out); continue;
+  }
   if (test === 'smoke-safety') {
     const prof = path.join(shots, 'profile');
     spawnSync(process.execPath, ['--no-warnings', path.join(__dirname, 'prepare-safety.js'), prof], { encoding: 'utf8' });
