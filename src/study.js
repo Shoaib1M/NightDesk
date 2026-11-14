@@ -160,7 +160,7 @@ async function loadActivity(force) {
   ];
   for (const [key, user, fetcher, shape] of jobs) {
     const cur = activity[key], s = actState[key];
-    if (!user || s.loading) continue;
+    if (!user || s.loading || (key === 'gh' && !settings.heatGh) || (key === 'cf' && !settings.heatCf)) continue;
     if (!force && cur && cur.user === user && Date.now() - cur.at < ACT_STALE) continue;
     s.loading = true; s.error = '';
     renderHeats();
@@ -188,8 +188,9 @@ function heatmap(weeks, value, color, tip) {
 function renderHeats(st = studyStats()) {
   const box = $('#heats');
   if (!box) return;
-  // As many weeks as fit across a third of the card, so all three sit side by side without scrolling.
-  const weeks = Math.max(8, Math.min(26, Math.floor(((box.clientWidth || 900) - 40) / 3 / 13)));
+  // Only the heatmaps switched on in Settings, side by side, each as many weeks wide as fits.
+  const n = 1 + (settings.heatGh ? 1 : 0) + (settings.heatCf ? 1 : 0);
+  const weeks = Math.max(8, Math.min(n === 1 ? 52 : 26, Math.floor(((box.clientWidth || 900) - 20 * (n - 1)) / n / 13)));
   const shade = (base, ratio) => `color-mix(in srgb, ${base} ${Math.round(25 + Math.min(1, ratio) * 75)}%, var(--line))`;
   const fmtDay = (d) => d.toLocaleDateString('en', { day: 'numeric', month: 'short' });
   const since = addDays(new Date(), -7 * weeks);
@@ -226,7 +227,10 @@ function renderHeats(st = studyStats()) {
       heatmap(weeks, (k) => (cfd && cfd.days[k] ? cfd.days[k][0] : 0), (n) => shade('#5b9dff', n / cfMax),
         (d, n) => `${fmtDay(d)}: ${n} submission${n === 1 ? '' : 's'}${cfd && cfd.days[ymd(d)] ? `, ${cfd.days[ymd(d)][1]} accepted` : ''}`), status('cf'));
 
-  box.replaceChildren(studyPanel, ghPanel, cfPanel);
+  box.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  box.replaceChildren(studyPanel, ...(settings.heatGh ? [ghPanel] : []), ...(settings.heatCf ? [cfPanel] : []));
+  const sub = $('.act h3 small');
+  if (sub) sub.textContent = ['study', settings.heatGh && 'GitHub', settings.heatCf && 'Codeforces'].filter(Boolean).join(', ').replace(/, ([^,]+)$/, ' and $1');
 }
 
 let heatResizeT;

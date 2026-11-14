@@ -114,6 +114,7 @@ const settings = Object.assign({
   theme: 'dark', palette: 'rose', h24: false, seconds: true, screenTime: true, guard: true, examOnClock: true, flipSound: false, buddy: true, quotes: false, quoteMin: 2, quotesOnline: true,
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
   cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
+  hiddenTabs: [], heatGh: true, heatCf: true,
 }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 
@@ -216,8 +217,17 @@ const VIEWS = [
   ['study', 'Study'], ['screen', 'Screen'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
 ];
 
+// Tabs can be switched off in Settings › Tabs (Clock always stays). A hidden tab leaves the dock and
+// the number keys, and anything that tries to open it lands on the Clock instead.
+const tabOn = (id) => id === 'clock' || !(settings.hiddenTabs || []).includes(id);
+const shownViews = () => VIEWS.filter(([v]) => tabOn(v));
+function applyTabs() {
+  $$('#dock button').forEach((b) => { b.hidden = !tabOn(b.dataset.v); });
+  if (!tabOn(settings.view)) showView('clock');
+}
+
 function showView(id) {
-  if (!VIEWS.some(([v]) => v === id)) id = 'clock';
+  if (!VIEWS.some(([v]) => v === id) || !tabOn(id)) id = 'clock';
   settings.view = id;
   saveSettings();
   for (const [v] of VIEWS) $('#v-' + v).classList.toggle('on', v === id);
@@ -239,6 +249,8 @@ function buildChrome() {
   for (const [id, label] of VIEWS) {
     dock.append(h('button', { 'data-v': id, html: icon(id), onclick: () => showView(id) }, h('span', {}, label)));
   }
+  applyTabs();
+  on('settings', applyTabs);
   const ib = (id, ic, title, fn) => h('button', { class: 'ib', id, title, 'aria-label': title, html: icon(ic), onclick: fn });
   $('#top').append(
     ib('b-sound', 'sound', 'Sounds and music', () => toggleSoundPop()),
@@ -276,7 +288,8 @@ addEventListener('keydown', (e) => {
     return;
   }
   if ((e.target.matches && e.target.matches('input, button, select, [contenteditable]')) || e.ctrlKey || e.altKey || e.metaKey || !$('#modal').hidden) return;
-  if (e.key >= '1' && e.key <= String(VIEWS.length)) showView(VIEWS[+e.key - 1][0]);
+  // 1-9 open the tabs in the order shown in the dock.
+  if (/^[1-9]$/.test(e.key) && +e.key <= shownViews().length) showView(shownViews()[+e.key - 1][0]);
   if (e.key === ' ') { e.preventDefault(); emit('space', settings.view); }
   if (e.key === 'ArrowRight') emit('arrow', 1);
   if (e.key === 'ArrowLeft') emit('arrow', -1);
@@ -300,10 +313,22 @@ const SPOTIFY_STEPS = [
   ['Paste the app\'s ', 'Client ID', ' below and press Connect. Playback controls need Spotify Premium.'],
 ];
 
-async function openSettings() {
+// One-line notes under each tab's switch in Settings › Tabs.
+const TAB_HINTS = {
+  clock: 'Always on',
+  alarm: 'Alarms you already set still ring when this is off',
+  study: 'Study time is still logged from Focus when this is off',
+  screen: 'Turn tracking itself on or off under Screen time',
+  pet: 'The pet on screen has its own switch under Appearance',
+  contests: 'Off also stops Codeforces reminders and calendar entries',
+  lamp: 'Solid colour screen to use a monitor as a light',
+};
+
+async function fillSettings() {
   toggleSoundPop(false);
   const sheet = $('#sheet');
   sheet.replaceChildren();
+  sheet.classList.add('building'); // stays invisible until it is split into pages at the end
   $('#modal').hidden = false;
 
   const changed = () => { saveSettings(); emit('settings'); };
@@ -313,6 +338,19 @@ async function openSettings() {
     const i = h('input', { type: 'checkbox', class: 'sw' });
     i.checked = !!settings[key];
     i.addEventListener('change', () => { settings[key] = i.checked; changed(); });
+    return i;
+  };
+  const locked = () => { const i = h('input', { type: 'checkbox', class: 'sw', disabled: '' }); i.checked = true; return i; };
+  const tabSwitch = (id) => {
+    if (id === 'clock') return locked();
+    const i = h('input', { type: 'checkbox', class: 'sw', 'aria-label': 'Show the tab' });
+    i.checked = tabOn(id);
+    i.addEventListener('change', () => {
+      const hidden = new Set(settings.hiddenTabs || []);
+      if (i.checked) hidden.delete(id); else hidden.add(id);
+      settings.hiddenTabs = VIEWS.map(([v]) => v).filter((v) => hidden.has(v));
+      changed();
+    });
     return i;
   };
   const num = (key, min, max) => {
@@ -353,6 +391,12 @@ async function openSettings() {
     row('Add new quotes from the internet', 'Once a day, from zenquotes.io. Saved on this PC so they work offline', sw('quotesOnline')),
     h('div', { class: 'srow' }, h('span', {}, 'Quote library', h('small', {}, `${allQuotes().length} quotes saved`)),
       h('button', { class: 'btn', onclick: async (e) => { await fetchQuotes(true); e.target.previousSibling.lastChild.textContent = `${allQuotes().length} quotes saved`; } }, 'Fetch more now')),
+    h('h3', {}, 'Tabs'),
+    ...VIEWS.map(([id, label]) => row(label, TAB_HINTS[id], tabSwitch(id))),
+    h('h3', {}, 'Study tab heatmaps'),
+    row('Study time', 'Always on', locked()),
+    row('GitHub', 'Contributions from your public GitHub profile', sw('heatGh')),
+    row('Codeforces', 'Submissions from your Codeforces handle', sw('heatCf')),
     h('h3', {}, 'Focus timer'),
     row('Focus', 'minutes', num('focusMin', 1, 240)),
     row('Break', 'minutes', num('breakMin', 1, 120)),
@@ -524,6 +568,47 @@ async function openSettings() {
   ghIn.addEventListener('change', () => { settings.ghUser = ghIn.value.trim(); changed(); });
   sheet.append(h('h3', {}, 'GitHub'), row('Username', 'Public contribution heatmap on the Study tab. No sign-in needed', ghIn));
 }
+// Fills the sheet, then always splits it into pages, even if one part failed to load.
+async function openSettings() {
+  try { await fillSettings(); } catch (err) { console.error(err); }
+  splitSettings($('#sheet'));
+}
+
+// Settings as pages with a menu down the side, instead of one long scroll. Each page gathers the
+// headed groups listed for it; the last page opened is remembered.
+const SETTINGS_PAGES = [
+  ['look', 'Appearance', ['Appearance']],
+  ['tabs', 'Tabs', ['Tabs', 'Study tab heatmaps']],
+  ['focus', 'Focus & alarms', ['Focus timer', 'Alarms', 'Focus tools']],
+  ['data', 'App & data', ['Windows', 'Your data']],
+  ['google', 'Google Calendar', ['Google Calendar']],
+  ['accounts', 'Accounts', ['Spotify', 'Codeforces', 'GitHub']],
+];
+let settingsPage = 'look';
+function splitSettings(sheet) {
+  const head = sheet.querySelector('.head');
+  const pages = new Map(SETTINGS_PAGES.map(([id]) => [id, h('section', { class: 'spage', 'data-page': id })]));
+  const pageOf = (title) => (SETTINGS_PAGES.find(([, , groups]) => groups.includes(title)) || SETTINGS_PAGES[0])[0];
+  let cur = pages.get('look');
+  for (const node of [...sheet.childNodes]) {
+    if (node === head) continue;
+    if (node.tagName === 'H3') cur = pages.get(pageOf(node.textContent));
+    cur.append(node);
+  }
+  const nav = h('nav', { class: 'snav', 'aria-label': 'Settings sections' }, SETTINGS_PAGES.map(([id, label]) =>
+    h('button', { 'data-page': id, onclick: () => showSettingsPage(id) }, label)));
+  sheet.append(h('div', { class: 'sbody' }, nav, h('div', { class: 'spane' }, [...pages.values()])));
+  sheet.classList.remove('building');
+  showSettingsPage(settingsPage);
+}
+function showSettingsPage(id) {
+  if (!SETTINGS_PAGES.some(([p]) => p === id)) id = 'look';
+  settingsPage = id;
+  $$('#sheet .spage').forEach((p) => { p.hidden = p.dataset.page !== id; });
+  $$('#sheet .snav button').forEach((b) => b.classList.toggle('on', b.dataset.page === id));
+  const pane = $('#sheet .spane');
+  if (pane) pane.scrollTop = 0;
+}
 
 // Dev hook used by the screenshot mode in main.js.
 window.__shot = (step) => {
@@ -534,7 +619,8 @@ window.__shot = (step) => {
     else if (part === 'settings') openSettings();
     else if (part === 'screendemo') { screenDemo(); renderScreen(); }
     else if (part === 'fills') { const t = new Date(); [['yellow', 0], ['pink', 2], ['mint', 3], ['sky', 6], ['lilac', 9], ['peach', 11], ['yellow', 13]].forEach(([c, n]) => { const all = dayFills(); all[ymd(addDays(t, n))] = c; store.set('dayFills', all); }); saveEvent({ title: 'Codeforces practice', allDay: true, start: ymd(t), end: ymd(addDays(t, 1)) }, null).then(renderCal); }
-    else if (part === 'datasec') setTimeout(() => { const h3 = [...document.querySelectorAll('#sheet h3')].find((x) => x.textContent === 'Your data'); if (h3) h3.scrollIntoView(); }, 900);
+    else if (part === 'datasec') setTimeout(() => showSettingsPage('data'), 900);
+    else if (part.startsWith('spage=')) setTimeout(() => showSettingsPage(part.slice(6)), 900);
     else if (part === 'sound') toggleSoundPop(true);
     else if (part === 'ring') ringAlarm({ label: 'Test alarm' });
     else if (part === 'demo') seedDemo();

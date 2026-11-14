@@ -16,7 +16,7 @@ function allEvents() {
   for (const e of localEvents()) {
     out.push({ ...e, src: 'local', start: toDate(e.start, e.allDay), end: toDate(e.end, e.allDay), color: 'var(--accent)', editable: true });
   }
-  if (settings.cfInCalendar) {
+  if (settings.cfInCalendar && tabOn('contests')) {
     for (const c of cal.contests) {
       if (out.some((e) => e.title === c.name && Math.abs(e.start - c.start) < 60000)) continue;
       out.push({ id: 'cf' + c.id, src: 'cf', title: c.name, start: new Date(c.start), end: new Date(c.start + c.duration), allDay: false, color: '#e0a040', editable: false, url: `https://codeforces.com/contests/${c.id}` });
@@ -312,7 +312,7 @@ function renderContests() {
 }
 
 function contestReminders() {
-  if (!settings.cfRemind) return;
+  if (!settings.cfRemind || !tabOn('contests')) return;
   const now = Date.now();
   for (const c of cal.contests) {
     if (c.start > now && c.start - now <= 30 * 60000 && !cf.reminded.includes(c.id)) {

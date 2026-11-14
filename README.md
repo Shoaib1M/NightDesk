@@ -24,7 +24,7 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Lamp** | The whole window as one solid colour with presets, any custom colour and brightness. Made for using a second monitor as a light. |
 | **Sounds** | Nine synthesised sounds you can layer: white, pink, brown, study, rain, ocean, cabin, fireplace, binaural focus beats. Spotify now-playing and controls once linked. |
 
-Also: light and dark themes, five accent colours, fullscreen (F11), starts with Windows, and keeps running in the tray when closed so timers, alarms and sounds carry on.
+Also: pick which tabs you want (Settings › Tabs; switch off Contests, Lamp or anything you do not use, and choose which heatmaps the Study tab shows), light and dark themes, five accent colours, fullscreen (F11), starts with Windows, and keeps running in the tray when closed so timers, alarms and sounds carry on.
 
 ## Screenshots
 
