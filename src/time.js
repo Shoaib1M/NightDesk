@@ -326,6 +326,7 @@ function tickAlarms() {
 $('#al-days').append(...DAY_ORDER.map((d) => h('button', { type: 'button', title: DAYS[d], 'aria-label': DAYS[d], onclick: (e) => {
   formDays = formDays.includes(d) ? formDays.filter((x) => x !== d) : [...formDays, d];
   e.currentTarget.classList.toggle('on', formDays.includes(d));
+  alarmRingsIn();
 } }, DAY_LETTERS[d])));
 $('#al-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -334,8 +335,42 @@ $('#al-form').addEventListener('submit', (e) => {
   $$('#al-days button').forEach((b) => b.classList.remove('on'));
   $('#al-label').value = '';
   renderAlarms();
+  alarmRingsIn();
 });
+
+// The time picker: spinning wheels like an iPhone (hour, minute and AM/PM, or 24-hour).
+let alarmWheels = null;
+function buildAlarmWheel() {
+  const [hh, mm] = $('#al-time').value.split(':').map(Number);
+  const h24 = !!settings.h24;
+  const update = () => {
+    let H = alarmWheels.h.get();
+    if (!h24) H = (H % 12) + (alarmWheels.ap.get() ? 12 : 0);
+    $('#al-time').value = `${pad(H)}:${pad(alarmWheels.m.get())}`;
+    alarmRingsIn();
+  };
+  alarmWheels = {
+    h24,
+    h: wheel({ items: h24 ? Array.from({ length: 24 }, (_, i) => pad(i)) : ['12', ...Array.from({ length: 11 }, (_, i) => String(i + 1))], label: 'Hour', onChange: update }),
+    m: wheel({ items: Array.from({ length: 60 }, (_, i) => pad(i)), label: 'Minute', onChange: update }),
+    ap: h24 ? null : wheel({ items: ['AM', 'PM'], loop: false, label: 'AM or PM', onChange: update }),
+  };
+  $('#al-wheel').replaceChildren(alarmWheels.h.el, h('div', { class: 'wheel-colon' }, ':'), alarmWheels.m.el, ...(alarmWheels.ap ? [alarmWheels.ap.el] : []));
+  alarmWheels.h.set(h24 ? hh : hh % 12, true);
+  alarmWheels.m.set(mm, true);
+  if (alarmWheels.ap) alarmWheels.ap.set(hh >= 12 ? 1 : 0, true);
+  alarmRingsIn();
+}
+// "Rings in 7 h 12 min", like the phone says when you set an alarm.
+function alarmRingsIn() {
+  const at = alarmNext({ time: $('#al-time').value, days: formDays });
+  if (!at) { $('#al-in').textContent = ''; return; }
+  const min = Math.max(1, Math.ceil((at - Date.now()) / 60000)), d = Math.floor(min / 1440), hrs = Math.floor((min % 1440) / 60), m = min % 60;
+  $('#al-in').textContent = 'Rings in ' + [d && `${d} d`, hrs && `${hrs} h`, m && `${m} min`].filter(Boolean).join(' ');
+}
+setInterval(() => { if ($('#v-alarm').classList.contains('on')) alarmRingsIn(); }, 20000);
 $('#al-test').addEventListener('click', () => ringAlarm({ label: 'Test alarm' }));
 $('#al-time').value = '07:00';
-on('view', (v) => { if (v === 'alarm') renderAlarms(); });
-on('settings', () => { tickClock(); renderAlarms(); });
+buildAlarmWheel();
+on('view', (v) => { if (v === 'alarm') { renderAlarms(); alarmRingsIn(); } });
+on('settings', () => { tickClock(); renderAlarms(); if (!alarmWheels || alarmWheels.h24 !== !!settings.h24) buildAlarmWheel(); });

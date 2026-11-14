@@ -108,10 +108,16 @@
         <button class="btn" id="al-test">Test alarm</button>
       </div>
       <form class="card al-form" id="al-form">
-        <input type="time" id="al-time" required>
-        <input id="al-label" placeholder="Label (optional)" maxlength="60" spellcheck="false">
-        <div class="days" id="al-days"></div>
-        <button class="btn pri" type="submit">Add alarm</button>
+        <div class="al-pick">
+          <div class="wheel" id="al-wheel" aria-label="Alarm time"></div>
+          <div class="al-in" id="al-in"></div>
+        </div>
+        <div class="al-side">
+          <input type="hidden" id="al-time" value="07:00">
+          <input id="al-label" placeholder="Label (optional)" maxlength="60" spellcheck="false">
+          <div class="days" id="al-days"></div>
+          <button class="btn pri" type="submit">Add alarm</button>
+        </div>
       </form>
       <div class="al-list" id="al-list"></div>
       <p class="hint">Alarms ring while Nightdesk is running, including when it is closed to the tray. A ringing alarm blurs every screen until you stop or snooze it.</p>
@@ -303,6 +309,7 @@
 <script src="core.js"></script>
 <script src="sound.js"></script>
 <script src="study.js"></script>
+<script src="wheel.js"></script>
 <script src="time.js"></script>
 <script src="calendar.js"></script>
 <script src="lamp.js"></script>
