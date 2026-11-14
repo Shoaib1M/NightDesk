@@ -61,7 +61,13 @@ For Windows 10 / 11.
 
 NightDesk starts with Windows and keeps running in the tray (by the clock) when you close the window, so timers and alarms still go off. Quit it from the tray icon. Switch start-with-Windows off in Settings.
 
-Your data starts empty and stays on your laptop in `%USERPROFILE%\.nightdesk`, with a daily backup in `Documents\Nightdesk Backups`. Updating (installing a newer Setup over the old one) or uninstalling (Settings → Apps → NightDesk) never deletes it.
+Your data starts empty and stays on your laptop in `%USERPROFILE%\.nightdesk`, with a daily backup in `Documents\Nightdesk Backups`. Updating or uninstalling (Settings → Apps → NightDesk) never deletes it.
+
+### Updates
+
+**From version 1.0.5 on, NightDesk updates itself.** It checks GitHub a minute after it starts and every few hours, downloads a new version in the background, and installs it the next time NightDesk closes. When an update is ready you also get a **Restart to update** button (top of the window, and in Settings › App & data › Updates, which also has **Check now**). Your data is never touched.
+
+**On 1.0.4 or older:** download the newest **Nightdesk-Setup** from the [latest release](https://github.com/Shoaib1M/NightDesk/releases/latest) once and install it over the old one (do not uninstall first; no need to). Everything you had stays. After that, updates come by themselves.
 
 Google Calendar and Spotify are optional; each person sets up their own (see [Optional accounts](#optional-accounts)). GitHub and Codeforces heatmaps only need your username.
 
