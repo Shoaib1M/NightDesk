@@ -1,7 +1,7 @@
 {
   "name": "nightdesk",
   "productName": "Nightdesk",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Clock, focus timer, calendar, contests and lamp for late-night study",
   "main": "main.js",
   "scripts": {
@@ -25,13 +25,7 @@
       "output": "dist"
     },
     "files": [
-      "main.js",
-      "preload.js",
-      "db.js",
-      "migrate.js",
-      "focus-tools.js",
-      "gcal.js",
-      "spotify.js",
+      "*.js",
       "src/**/*",
       "build/icon.png",
       "build/icon.ico",
@@ -55,5 +49,8 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

@@ -370,9 +370,11 @@ function selfCheck(force) {
   const out = path.join(dir(), 'backup-check.json');
   try { const last = JSON.parse(fs.readFileSync(out, 'utf8')); if (!force && Date.now() - last.at < 7 * 864e5) return last; } catch {}
   const b = newestGoodBackup();
+  // A new install has nothing to check yet. That is not a failure, and it is not remembered, so
+  // the real check runs as soon as the first backup exists.
+  if (!b) return { at: Date.now(), ok: null, note: 'the first backup is made today' };
   let res;
-  if (!b) res = { at: Date.now(), ok: false, note: 'no backup with data yet' };
-  else {
+  {
     let tmp = null;
     try {
       tmp = path.join(require('os').tmpdir(), `nightdesk-check-${process.pid}.db`);

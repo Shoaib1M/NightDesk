@@ -39,7 +39,8 @@ jobs:
       - name: Build installer
         run: npm run dist
 
-      - name: Put installer on the release
+      # latest.yml and the .blockmap let installed copies update themselves (only changed parts download).
+      - name: Put installer and update files on the release
         if: github.ref_type == 'tag'
         shell: bash
         env:
@@ -47,9 +48,9 @@ jobs:
         run: |
           tag="$GITHUB_REF_NAME"
           if gh release view "$tag" > /dev/null 2>&1; then
-            gh release upload "$tag" dist/Nightdesk-Setup-*.exe --clobber
+            gh release upload "$tag" dist/Nightdesk-Setup-*.exe dist/Nightdesk-Setup-*.exe.blockmap dist/latest.yml --clobber
           else
-            gh release create "$tag" dist/Nightdesk-Setup-*.exe --title "NightDesk ${tag#v}" --notes-file .github/release-notes.md
+            gh release create "$tag" dist/Nightdesk-Setup-*.exe dist/Nightdesk-Setup-*.exe.blockmap dist/latest.yml --title "NightDesk ${tag#v}" --notes-file .github/release-notes.md
           fi
 
       - name: Keep installer as a build artifact

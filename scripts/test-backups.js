@@ -23,6 +23,11 @@ const sizeOf = (dir) => fs.readdirSync(dir).filter((f) => /^nightdesk-/.test(f))
 
 db.set('subjects', JSON.stringify([{ id: 's1', name: 'OS' }]));
 db.loadAll();
+// A brand-new install has no backup yet: that is not a failed check, and it is not remembered.
+const first = db.selfCheck(false);
+check('new install: the backup check is neutral, not failed', first.ok === null, first);
+check('new install: nothing is remembered, so the real check runs once a backup exists', !fs.existsSync(path.join(data, 'backup-check.json')));
+check('new install: no FAILED line in the log', !logs.some((l) => /FAILED/.test(l)), logs);
 db.backupNow();
 const bdir = path.join(data, 'backups');
 // 730 days of history. Each day's copy holds everything so far (the study log grows every day,

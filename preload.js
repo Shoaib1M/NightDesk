@@ -17,6 +17,13 @@ contextBridge.exposeInMainWorld('api', {
     onView: (cb) => ipcRenderer.on('app:view', (_e, v) => cb(v)),
     folder: inv('db:folder'),
   },
+  update: {
+    state: inv('update:state'),
+    check: inv('update:check'),
+    install: inv('update:install'),
+    setAuto: inv('update:setAuto'),
+    onState: (cb) => ipcRenderer.on('app:update', (_e, s) => cb(s)),
+  },
   app: {
     info: inv('app:info'),
     setLogin: inv('app:setLogin'),

@@ -13,6 +13,7 @@ const gcal = require('./gcal');
 const spotify = require('./spotify');
 const db = require('./db');
 const focusTools = require('./focus-tools');
+const updates = require('./updates');
 
 // Keep Windows' taskbar shortcut tied to Nightdesk, rather than Electron's
 // runtime identity. This must happen before any windows are created.
@@ -617,6 +618,8 @@ if (!firstCopy || process.argv.includes('--quit')) {
     syncLoginItem();
     registerIpc();
     const tools = focusTools({ app, getWin: () => (win && !win.isDestroyed() ? win : null), prefs, savePrefs, handle, logError, SHOTS, showWindow, preload: path.join(__dirname, 'preload.js'), srcDir: path.join(__dirname, 'src') });
+    updates({ getWin: () => (win && !win.isDestroyed() ? win : null), prefs, savePrefs, handle, logInfo, logError, isTest: !!SHOTS,
+      beforeInstall: () => { quitting = true; } });
     createWindow();
     // A copy of the database every day, even if the app runs for days without restarting.
     setTimeout(() => db.backupIfDue(), 60000); // first check a minute after start, then every 30 min

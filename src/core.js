@@ -172,12 +172,38 @@ function notify(title, body) {
 }
 
 let toastT;
-function toast(msg) {
+function toast(msg, action) {
   const el = $('#toast');
-  el.textContent = msg;
+  el.replaceChildren(msg);
+  if (action) el.append(h('button', { class: 'btn sm pri toast-act', onclick: () => { el.hidden = true; action.fn(); } }, action.label));
   el.hidden = false;
   clearTimeout(toastT);
-  toastT = setTimeout(() => { el.hidden = true; }, 5000);
+  toastT = setTimeout(() => { el.hidden = true; }, action ? 15000 : 5000);
+}
+
+// ---------- updates (installed app only): checked in the background, installed on restart
+const update = { state: 'idle', version: '', next: null, percent: 0, error: '', auto: true, packaged: false, told: false };
+function updateText(u = update) {
+  if (!u.packaged) return 'Updates work in the installed app';
+  if (u.state === 'checking') return 'Checking for updates…';
+  if (u.state === 'downloading') return `Downloading ${u.next || 'update'}… ${u.percent || 0}%`;
+  if (u.state === 'ready') return `Version ${u.next} is ready. Restart to update`;
+  if (u.state === 'latest') return 'You have the latest version';
+  if (u.state === 'error') return 'Could not check (offline?). Tries again later';
+  return 'Checks for updates every few hours';
+}
+const restartToUpdate = () => api && call(api.update.install()).catch((err) => toast(err.message));
+if (api && api.update) {
+  call(api.update.state()).then((s) => { Object.assign(update, s); emit('update'); }).catch(() => {});
+  api.update.onState((s) => {
+    Object.assign(update, s);
+    emit('update');
+    if (s.state === 'ready' && !update.told) {
+      update.told = true;
+      toast(`NightDesk ${s.next} is ready`, { label: 'Restart to update', fn: restartToUpdate });
+      notify('NightDesk update ready', `Version ${s.next} installs when you restart NightDesk (or next time it closes).`);
+    }
+  });
 }
 
 // ---------- icons
@@ -435,6 +461,31 @@ async function fillSettings() {
     row('Keep running in the background when closed', 'Timers, alarms and sounds carry on. Quit from the tray icon', trayBox),
   );
 
+  const upNote = h('small', {}, updateText());
+  const upBtn = h('button', { class: 'btn' });
+  const upPaint = () => {
+    upNote.textContent = updateText();
+    upBtn.textContent = update.state === 'ready' ? 'Restart to update' : 'Check now';
+    upBtn.classList.toggle('pri', update.state === 'ready');
+    upBtn.disabled = !update.packaged || update.state === 'checking' || update.state === 'downloading';
+  };
+  upBtn.addEventListener('click', () => {
+    if (update.state === 'ready') return restartToUpdate();
+    call(api.update.check()).catch((err) => toast(err.message));
+    update.state = 'checking'; upPaint();
+  });
+  on('update', upPaint);
+  upPaint();
+  const autoUp = h('input', { type: 'checkbox', class: 'sw' });
+  autoUp.checked = update.auto !== false;
+  autoUp.disabled = !update.packaged;
+  autoUp.addEventListener('change', () => { if (api) call(api.update.setAuto(autoUp.checked)).then((v) => { update.auto = v; }).catch(() => {}); });
+  sheet.append(
+    h('h3', {}, 'Updates'),
+    h('div', { class: 'srow' }, h('span', {}, `NightDesk ${update.version || ''}`, upNote), upBtn),
+    row('Install updates automatically', 'Downloads in the background and installs next time NightDesk closes. Your data is never touched', autoUp),
+  );
+
   const dataNote = h('small', {}, store.persistent
     ? 'Everything is saved instantly to a local database on this PC. A backup is made every day and kept forever.'
     : 'The database could not be opened, so data is being kept in browser storage for now.');
@@ -442,6 +493,7 @@ async function fillSettings() {
   // Weekly proof that the backups really work (one is unpacked and checked in full).
   if (api && store.persistent && api.db.check) call(api.db.check()).then((c) => {
     if (!c) return;
+    if (c.ok === null) { dataNote.append(h('span', {}, ` Nothing to verify yet: ${c.note}.`)); return; }
     const when = new Date(c.at).toLocaleDateString('en', { day: 'numeric', month: 'short' });
     if (c.ok) dataNote.append(h('span', { class: 'check-ok' }, ` ✓ Backups verified ${when}.`));
     else dataNote.append(h('span', { class: 'check-bad' }, ` ⚠ Backup check failed ${when}: ${c.note}. Your live data is untouched — tell Claude.`));
@@ -580,7 +632,7 @@ const SETTINGS_PAGES = [
   ['look', 'Appearance', ['Appearance']],
   ['tabs', 'Tabs', ['Tabs', 'Study tab heatmaps']],
   ['focus', 'Focus & alarms', ['Focus timer', 'Alarms', 'Focus tools']],
-  ['data', 'App & data', ['Windows', 'Your data']],
+  ['data', 'App & data', ['Windows', 'Updates', 'Your data']],
   ['google', 'Google Calendar', ['Google Calendar']],
   ['accounts', 'Accounts', ['Spotify', 'Codeforces', 'GitHub']],
 ];
