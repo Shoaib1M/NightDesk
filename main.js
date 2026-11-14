@@ -16,7 +16,10 @@ const focusTools = require('./focus-tools');
 
 // Keep Windows' taskbar shortcut tied to Nightdesk, rather than Electron's
 // runtime identity. This must happen before any windows are created.
-const APP_ID = 'com.nightdesk.app';
+// Only the installed app uses the real ID. Runs from the project folder (npm start, tests) get their
+// own, so Windows never groups them with, or pins them as, the real app: such a pin would point at the
+// bare electron.exe and open Electron's blank default page instead of Nightdesk.
+const APP_ID = app.isPackaged ? 'com.nightdesk.app' : 'com.nightdesk.dev';
 app.setAppUserModelId(APP_ID);
 
 // Dev-only: NIGHTDESK_SHOTS=<dir> captures each view to PNG and exits, using a throwaway profile.
