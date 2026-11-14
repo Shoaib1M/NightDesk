@@ -402,7 +402,7 @@ function renderPetView() {
     if (buddy.tab === 'kind' && !worn) look.color = SIGNATURE[id];
     drawPet(cv.getContext('2d'), look);
     return h('button', { class: 'item' + (worn ? ' on' : ''), onclick: () => shopClick(buddy.tab, id, price) },
-      cv, h('b', {}, label), h('small', {}, worn ? 'Wearing' : owned ? 'Owned' : `${price} coins`));
+      cv, h('b', {}, label), h('small', {}, worn ? (buddy.tab === 'hat' ? 'Wearing' : 'Chosen') : owned ? 'Owned' : `${price} coins`));
   }));
 
   const opt = (label, hint, key, after) => {

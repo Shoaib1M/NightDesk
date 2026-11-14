@@ -37,3 +37,26 @@ cv.addEventListener('pointerup', () => endDrag(true));
 cv.addEventListener('pointercancel', () => endDrag(false));
 cv.addEventListener('lostpointercapture', () => endDrag(false));
 addEventListener('blur', () => endDrag(false));
+
+// Clicks go through the empty part of this window to whatever is behind it. The main process keeps
+// the window click-through and still forwards mouse moves here; while the cursor is over a drawn
+// pixel of the pet (or a drag is under way) the window takes clicks.
+let hit = false;
+function onPet(x, y) {
+  const r = cv.getBoundingClientRect();
+  if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) return false;
+  let px = Math.floor(((x - r.left) / r.width) * cv.width);
+  const py = Math.floor(((y - r.top) / r.height) * cv.height);
+  if (walk.flip) px = cv.width - 1 - px; // the sprite is mirrored on screen while walking left
+  const g = cv.getContext('2d');
+  // A one-pixel margin round the pet, so the edge of its outline is easy to grab.
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const ax = px + dx, ay = py + dy;
+    if (ax >= 0 && ay >= 0 && ax < cv.width && ay < cv.height && g.getImageData(ax, ay, 1, 1).data[3] > 40) return true;
+  }
+  return false;
+}
+function setHit(on) { if (on !== hit) { hit = on; window.api.pet.hit(on); } }
+addEventListener('mousemove', (e) => setHit(!!drag || onPet(e.clientX, e.clientY)));
+document.addEventListener('mouseleave', () => { if (!drag) setHit(false); });
+window.__petHitAt = onPet; // tests

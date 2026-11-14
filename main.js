@@ -239,6 +239,7 @@ async function showAlarm(data) {
 // ---------- desktop pet: a small transparent always-on-top window that mirrors the in-app pet
 let petWin = null;
 let lastPetState = null;
+let petHit = false; // is the cursor on the pet (window takes clicks) or not (clicks pass through)
 const PET_SIZE = { width: 260, height: 260 };
 
 function petStartPosition() {
@@ -263,6 +264,11 @@ function setDesktopPet(on) {
   });
   petWin.webContents.on('render-process-gone', (_e, d) => { logError('pet crashed', d && d.reason); if (petWin && !petWin.isDestroyed()) petWin.reload(); });
   petWin.setAlwaysOnTop(true, 'floating');
+  // The window is a lot bigger than the pet (room for its speech bubble and hops). Clicks pass
+  // straight through it to whatever is behind, except on the pet itself: the page reports when
+  // the cursor is over a drawn pixel of the pet (pet:hit) and only then does the window take clicks.
+  petWin.setIgnoreMouseEvents(true, { forward: true });
+  petHit = false;
   petWin.loadFile(path.join(__dirname, 'src', 'pet-desktop.html'));
   petWin.webContents.once('did-finish-load', () => {
     if (!petWin || petWin.isDestroyed()) return;
@@ -346,6 +352,11 @@ function registerPetIpc() {
     if (petAlive()) petWin.webContents.send('pet:state', s);
   });
   ipcMain.on('pet:walk', (e, fraction) => { if (fromApp(e) && Number.isFinite(fraction)) { petWalks++; startPetWalk(fraction); } });
+  ipcMain.on('pet:hit', (e, on) => {
+    if (!fromPet(e) || !!on === petHit) return;
+    petHit = !!on;
+    petWin.setIgnoreMouseEvents(!petHit, { forward: true });
+  });
   ipcMain.on('pet:dragStart', (e) => { if (fromPet(e)) startPetDrag(); });
   ipcMain.on('pet:dragEnd', (e) => { if (fromPet(e)) stopPetDrag(); });
   ipcMain.on('pet:click', (e) => {
@@ -362,7 +373,7 @@ function registerPetIpc() {
       if (cmd === 'dragStart') startPetDrag();
       if (cmd === 'dragEnd') stopPetDrag();
       const b = petWin.getBounds(), d = screen.getDisplayMatching(b);
-      return { bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null, cursor: screen.getCursorScreenPoint() };
+      return { hit: petHit, bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null, cursor: screen.getCursorScreenPoint() };
     });
   }
 }

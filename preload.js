@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('api', {
     onWalk: (cb) => ipcRenderer.on('pet:walk', (_e, w) => cb(w)),
     test: inv('pet:test'),
     dragEnd: () => ipcRenderer.send('pet:dragEnd'),
+    hit: (on) => ipcRenderer.send('pet:hit', !!on),
     click: () => ipcRenderer.send('pet:click'),
   },
   activity: { github: inv('gh:contrib'), codeforces: inv('cf:activity') },
