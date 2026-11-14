@@ -9,10 +9,51 @@
     "icon": "node scripts/make-icon.js",
     "build": "node scripts/make-icon.js && electron-packager . Nightdesk --platform=win32 --arch=x64 --out=release --overwrite --icon=build/icon.ico --ignore=\"^/(dist|release|scripts|shots|temp)\"",
     "test": "node scripts/run-tests.js",
-    "install-app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1"
+    "install-app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1",
+    "dist": "node scripts/make-icon.js && electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
-    "electron": "^45.3.1"
+    "electron": "^45.3.1",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Shoaib Munavary",
+  "build": {
+    "appId": "com.nightdesk.app",
+    "productName": "Nightdesk",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db.js",
+      "migrate.js",
+      "focus-tools.js",
+      "gcal.js",
+      "spotify.js",
+      "src/**/*",
+      "build/icon.png",
+      "build/icon.ico",
+      "package.json",
+      "LICENSE"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "artifactName": "Nightdesk-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nightdesk",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    }
   }
 }

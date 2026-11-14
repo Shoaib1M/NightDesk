@@ -1,0 +1,58 @@
+# Builds the Windows installer and puts Nightdesk-Setup-<version>.exe on a GitHub release.
+# Either push a version tag (git tag v1.0.1 && git push origin v1.0.1) or publish a release from
+# the Releases page with a new tag: both end with the installer under the release's Assets.
+name: Build installer
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+  workflow_dispatch: # "Run workflow" button: builds the installer as a downloadable artifact only
+
+permissions:
+  contents: write
+
+concurrency:
+  group: installer-${{ github.ref }}
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The installer's version follows the tag (v1.2.0 -> 1.2.0).
+      - name: Set version from tag
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      - name: Build installer
+        run: npm run dist
+
+      - name: Put installer on the release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" dist/Nightdesk-Setup-*.exe --clobber
+          else
+            gh release create "$tag" dist/Nightdesk-Setup-*.exe --title "NightDesk ${tag#v}" --notes-file .github/release-notes.md
+          fi
+
+      - name: Keep installer as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nightdesk-Setup
+          path: dist/Nightdesk-Setup-*.exe

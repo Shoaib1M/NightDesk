@@ -50,7 +50,42 @@ Notes:
 
 The desktop pet: ![Desktop pet](docs/screenshots/desktop-pet.png)
 
-## Getting started
+## Download and install (no coding needed)
+
+For Windows 10 / 11.
+
+1. Open the [latest release](https://github.com/Shoaib1M/NightDesk/releases/latest) and download **Nightdesk-Setup-x.y.z.exe** under *Assets*.
+2. Double-click it. Windows may show **"Windows protected your PC"** because the app is not code-signed: click **More info → Run anyway**.
+3. Pick where to install (the default is fine) and click **Install**. NightDesk opens when it is done.
+4. Open it any time from the **NightDesk icon on the desktop** or the Start menu. To keep it on the taskbar, right-click its taskbar icon while it is open and choose **Pin to taskbar**.
+
+NightDesk starts with Windows and keeps running in the tray (by the clock) when you close the window, so timers and alarms still go off. Quit it from the tray icon. Switch start-with-Windows off in Settings.
+
+Your data starts empty and stays on your laptop in `%USERPROFILE%\.nightdesk`, with a daily backup in `Documents\Nightdesk Backups`. Updating (installing a newer Setup over the old one) or uninstalling (Settings → Apps → NightDesk) never deletes it.
+
+Google Calendar and Spotify are optional; each person sets up their own (see [Optional accounts](#optional-accounts)). GitHub and Codeforces heatmaps only need your username.
+
+## Making a release (for the repo owner)
+
+The installer is built by GitHub itself ([.github/workflows/release.yml](.github/workflows/release.yml)). Quickest way, from the project folder: bump `"version"` in `package.json`, commit, then
+
+```bash
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+GitHub builds the installer and creates the release by itself (about 5 minutes, watch the **Actions** tab). Or do it on the website:
+
+1. Push your changes to `main`.
+2. On GitHub open **Releases → Draft a new release**.
+3. **Choose a tag** → type a new version such as `v1.0.0` (higher than the last one) → **Create new tag on publish**.
+4. Give it a title (for example `NightDesk 1.0.0`), write what changed, and click **Publish release**.
+5. Open the **Actions** tab and wait for *Build installer* to turn green (about 5 minutes). `Nightdesk-Setup-1.0.0.exe` then appears under the release's *Assets*.
+6. Send people the link `https://github.com/Shoaib1M/NightDesk/releases/latest`.
+
+To build the installer on your own PC instead: `npm install`, then `npm run dist`. It lands in `dist\`.
+
+## Getting started (from source)
 
 Requires [Node.js](https://nodejs.org) 20 or newer and Windows 10 / 11.
 
@@ -145,27 +180,26 @@ Sounds are generated with the Web Audio API and the pet is drawn pixel by pixel 
 
 ## Where your data lives
 
-Everything (subjects, study log, calendar, alarms and snoozes, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%USERPROFILE%.nightdesk
-ightdesk.db`. Each change is written to disk the moment it happens (WAL journal, `synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything.
+Everything (subjects, study log, calendar, alarms and snoozes, pet, coins, settings, the focus block in progress) is kept in a local SQLite database, `%USERPROFILE%\.nightdesk\nightdesk.db`. Each change is written to disk the moment it happens (`synchronous=FULL`), so closing the app, ending it in Task Manager, shutting down or losing power does not lose anything.
 
-**Backups, kept forever.** Every day gets its own copy (refreshed every 30 minutes, so it holds how the day ended) in `backups/`, with a second copy in `DocumentsNightdesk Backups` (off the PC too if Documents syncs to OneDrive). Copies older than 3 days are compressed, and each finished month is packed into one file. Consecutive days are nearly identical, so a whole month packs to about the size of a single day. Nothing is thrown away: every day ever saved is still listed under **Restore a day**, and each pack is unpacked and compared byte for byte before the loose copies are removed. Expected size including the Documents copy: about 7 MB after a year, 26 MB after 3 years, 170 MB after 10.
+**Backups, kept forever.** Every day gets its own copy (refreshed every 30 minutes, so it holds how the day ended) in `backups/`, with a second copy in `Documents\Nightdesk Backups` (off the PC too if Documents syncs to OneDrive). Copies older than 3 days are compressed, and each finished month is packed into one file. Consecutive days are nearly identical, so a whole month packs to about the size of a single day. Nothing is thrown away: every day ever saved is still listed under **Restore a day**, and each pack is unpacked and compared byte for byte before the loose copies are removed. Expected size including the Documents copy: about 7 MB after a year, 26 MB after 3 years, 170 MB after 10.
 
 **Checked every week.** Once a week the newest backup is unpacked and run through a full SQLite integrity check. Settings › Your data shows when it was last verified, or a clear warning if a check ever fails. Frozen or crashed windows reload by themselves; every change is already saved, so nothing is lost.
 
-**One folder, whoever starts the app.** Data lives outside AppData on purpose: Windows redirects AppData writes from programs started inside packaged apps (for example a terminal inside the Claude desktop app) to a hidden per-app copy, which would make different launches see different data. The first start of this version moves everything from the old `%APPDATA%Nightdesk` folder, merging in any such hidden copies, and leaves the originals untouched.
+**One folder, whoever starts the app.** Data lives outside AppData on purpose: Windows redirects AppData writes from programs started inside packaged apps (for example a terminal inside the Claude desktop app) to a hidden per-app copy, which would make different launches see different data. The first start of this version moves everything from the old `%APPDATA%\Nightdesk` folder, merging in any such hidden copies, and leaves the originals untouched.
 
 **Self-repair.** If the database is ever damaged, the newest good copy is restored on start. If the whole app data folder is wiped (or you set up a new PC), NightDesk finds the copies in Documents and brings everything back.
 
 **Undo.** Settings → Your data → *Restore a day* rolls everything back to any saved day; the state just before the restore is saved too, so a restore can itself be undone.
 
-Errors are written to `%USERPROFILE%.nightdesk
-ightdesk.log`, and a stray error never closes the app. Alarms that come due while the laptop sleeps ring when it wakes (up to an hour late, labelled "missed").
+Errors are written to `%USERPROFILE%\.nightdesk\nightdesk.log`, and a stray error never closes the app. Alarms that come due while the laptop sleeps ring when it wakes (up to an hour late, labelled "missed").
 
 Google and Spotify tokens sit next to the database, encrypted with Windows' own credential protection. You enter them once; both renew themselves.
 
 ## Limits worth knowing
 
-- Windows only (the installer script, start-with-Windows and the alarm overlay are written for it).
+- Windows only (the installer, start-with-Windows and the alarm overlay are written for it).
+- The installer is not code-signed, so Windows SmartScreen asks once before running it (**More info → Run anyway**).
 - Alarms ring only while NightDesk is running, including in the tray. They do not wake a sleeping PC, but one missed during sleep rings as soon as it wakes (up to an hour late).
 - The leaderboard is personal: it ranks your own best days, not other people.
 

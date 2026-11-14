@@ -6,12 +6,14 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const shots = path.join(root, 'shots');
-const electron = require('electron');
+// NIGHTDESK_EXE=<path to a built Nightdesk.exe> runs every suite against the packaged app instead.
+const exe = process.env.NIGHTDESK_EXE;
+const electron = exe || require('electron');
 const only = process.argv[2];
 let failed = false;
 
 function launch(evalFile, extraEnv = {}) {
-  const run = spawnSync(electron, ['.'], {
+  const run = spawnSync(electron, exe ? [] : ['.'], {
     cwd: root, encoding: 'utf8', timeout: 180000,
     env: { ...process.env, NIGHTDESK_SHOTS: shots, NIGHTDESK_EVAL: path.join(__dirname, evalFile), ...extraEnv },
   });

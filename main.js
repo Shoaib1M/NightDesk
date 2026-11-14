@@ -31,7 +31,7 @@ const DATA = SHOTS ? path.join(SHOTS, 'profile') : (process.env.NIGHTDESK_DATA |
 app.setPath('userData', DATA);
 // Runs once, in the first (real) copy of the app only: never in a short-lived --quit launcher.
 function moveOldData() {
-  if (SHOTS) return;
+  if (SHOTS || process.env.NIGHTDESK_DATA) return; // an explicit data folder (tests) never imports old copies
   const note = (m) => { try { fs.mkdirSync(DATA, { recursive: true }); fs.appendFileSync(path.join(DATA, 'nightdesk.log'), `[${new Date().toISOString()}] ${m}\n`); } catch {} };
   try {
     require('./migrate').migrate({
@@ -412,7 +412,7 @@ async function cfApi(method, query) {
 db.setLogger((...a) => logError('database', a.map((x) => (x && x.stack) || x).join(' ')));
 
 function applyMirror() {
-  const folder = SHOTS ? path.join(SHOTS, 'profile', 'mirror') : path.join(app.getPath('documents'), 'Nightdesk Backups');
+  const folder = SHOTS ? path.join(SHOTS, 'profile', 'mirror') : process.env.NIGHTDESK_DATA ? path.join(DATA, 'mirror') : path.join(app.getPath('documents'), 'Nightdesk Backups');
   db.setMirror(prefs.mirrorBackups === false ? null : folder);
 }
 
