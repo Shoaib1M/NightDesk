@@ -55,7 +55,14 @@ contextBridge.exposeInMainWorld('api', {
     onState: (cb) => ipcRenderer.on('mini:state', (_e, s) => cb(s)),
     cmd: (c) => ipcRenderer.send('mini:cmd', c),
   },
-  notes: { saveImage: inv('notes:saveImage') },
+  notes: { saveImage: inv('notes:saveImage'), saveFile: inv('notes:saveFile'), openFile: inv('notes:openFile') },
+  todoist: {
+    status: inv('todoist:status'),
+    connect: inv('todoist:connect'),
+    disconnect: inv('todoist:disconnect'),
+    tasks: inv('todoist:tasks'),
+    close: inv('todoist:close'),
+  },
   pet: {
     desktop: inv('pet:desktop'),
     state: (s) => ipcRenderer.send('pet:state', s),

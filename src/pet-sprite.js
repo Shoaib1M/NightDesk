@@ -31,6 +31,7 @@ const PET_PAL = {
   mint:     { fur: '#8fd9b6', belly: '#effcf5', nose: '#3f9f77', ink: '#1f4a39', eye: '#1f4a39' },
   lavender: { fur: '#b9a4f2', belly: '#f3eeff', nose: '#7a5bd6', ink: '#33265e', eye: '#33265e' },
   galaxy:   { fur: '#4b3f8f', belly: '#9b87f5', nose: '#f4c542', ink: '#1a1436', eye: '#f4c542' },
+  lily:     { fur: '#7cc46a', belly: '#eef8dc', nose: '#f0a0a0', ink: '#22401e', eye: '#22401e' },
   gold:     { fur: '#f2c14e', belly: '#fff6d6', nose: '#c9742a', ink: '#5c3d0c', eye: '#5c3d0c' },
 };
 const PET_INK = { t: '#6fb7ff', y: '#f4c542', r: '#e5484d', K: '#1f1b1e', g: '#f2b632', b: '#5b9dff' }; // tear and hat colours
@@ -43,8 +44,26 @@ const PET_HATS = {
   phones: [5, ['....KKKKKK......', '...K......K.....', '', 'bb..........bb..', 'bb..........bb..']],
 };
 
+// The frog: eyes on top of its head, rosy cheeks, a small smile and big back legs.
+const PET_FROG = [
+  '................',
+  '................',
+  '..kkk...kkk.....',
+  '.kweek.kweek....',
+  '.kooooooooook...',
+  '.kpoooooooopk...',
+  '.kooookkooook...',
+  '..kooooooook....',
+  '..kowwwwwwok....',
+  '.kkowwwwwwokk...',
+  '.kookwwwwkook...',
+  '.kookkkkkkook...',
+  '.kkkkkkkkkkkk...',
+];
+
 function petRows(kind) {
   const blank = '.'.repeat(PET_W);
+  if (kind === 'frog') return Array(PET_TOP).fill(blank).concat(PET_FROG);
   const rows = Array(PET_TOP).fill(blank).concat(PET_BODY);
   const set = (y, x, ch) => { rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1); };
   if (kind !== 'cat') { rows[5] = blank; rows[6] = blank; rows[7] = '.kkkkkkkkkkkk...'; } // no pointed ears
@@ -57,8 +76,27 @@ function petRows(kind) {
   return rows;
 }
 
-// look: { kind, color, hat }   opts: { closed, sad }
+// A pet made from your own picture: 32 x 36 RGBA pixels (base64), twice the detail of the others.
+let customCache = { src: '', img: null };
+function drawCustom(ctx, look, opts) {
+  const c = ctx.canvas;
+  if (c.width !== PET_W * 2) { c.width = PET_W * 2; c.height = PET_H * 2; }
+  if (customCache.src !== look.custom) {
+    const bin = atob(look.custom), px = new Uint8ClampedArray(bin.length);
+    for (let i = 0; i < bin.length; i++) px[i] = bin.charCodeAt(i);
+    customCache = { src: look.custom, img: px.length === c.width * c.height * 4 ? new ImageData(px, c.width, c.height) : null };
+  }
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (customCache.img) ctx.putImageData(customCache.img, 0, 0);
+  if (opts.closed) { ctx.fillStyle = 'rgba(20,16,40,.28)'; ctx.globalCompositeOperation = 'source-atop'; ctx.fillRect(0, 0, c.width, c.height); ctx.globalCompositeOperation = 'source-over'; }
+  const hat = PET_HATS[look.hat];
+  if (hat) hat[1].forEach((row, i) => [...row].forEach((ch, x) => { if (ch !== '.') { ctx.fillStyle = PET_INK[ch]; ctx.fillRect(x * 2, (hat[0] + i) * 2, 2, 2); } }));
+}
+
+// look: { kind, color, hat, custom }   opts: { closed, sad }
 function drawPet(ctx, look, opts = {}) {
+  if (look.kind === 'custom' && look.custom) return drawCustom(ctx, look, opts);
+  if (ctx.canvas.width !== PET_W) { ctx.canvas.width = PET_W; ctx.canvas.height = PET_H; }
   const pal = PET_PAL[look.color] || PET_PAL.ginger;
   const ink = { k: pal.ink, o: pal.fur, w: pal.belly, p: pal.nose, e: pal.eye };
   ctx.clearRect(0, 0, PET_W, PET_H);

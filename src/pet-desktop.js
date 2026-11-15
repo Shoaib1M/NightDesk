@@ -13,7 +13,12 @@ function paint() {
   drawPet(cv.getContext('2d'), st.look, { closed: st.closed || blink, sad: st.sad });
   say.hidden = !st.bubble;
   say.textContent = st.bubble || '';
+  think.hidden = !st.think;
+  if (think.textContent !== (st.think || '')) think.textContent = st.think || '';
 }
+// The thought bubble says what the pet needs; clicking it opens the Pet tab.
+const think = document.getElementById('think');
+think.addEventListener('click', () => window.api.pet.click());
 window.api.pet.onState((s) => { st = s; paint(); });
 window.api.pet.onWalk((w) => { walk = { on: !!w.on, flip: w.on ? !!w.flip : walk.flip }; paint(); });
 setInterval(() => { blink = !blink && Math.random() < 0.06; paint(); }, 700);
@@ -57,6 +62,12 @@ function onPet(x, y) {
   return false;
 }
 function setHit(on) { if (on !== hit) { hit = on; window.api.pet.hit(on); } }
-addEventListener('mousemove', (e) => setHit(!!drag || onPet(e.clientX, e.clientY)));
+function onThink(x, y) {
+  if (think.hidden) return false;
+  const r = think.getBoundingClientRect();
+  return x >= r.left - 2 && x < r.right + 2 && y >= r.top - 2 && y < r.bottom + 2;
+}
+addEventListener('mousemove', (e) => setHit(!!drag || onPet(e.clientX, e.clientY) || onThink(e.clientX, e.clientY)));
+window.__thinkAt = onThink; // tests
 document.addEventListener('mouseleave', () => { if (!drag) setHit(false); });
 window.__petHitAt = onPet; // tests

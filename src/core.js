@@ -605,6 +605,32 @@ async function fillSettings() {
     row('Client ID', null, sIn),
   );
 
+  // Todoist
+  const tStatus = h('small', {}, 'Checking…');
+  const tIn = h('input', { type: 'password', placeholder: 'API token', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Todoist API token' });
+  const tBtn = h('button', { class: 'btn pri' }, 'Connect');
+  const tOff = h('button', { class: 'btn', hidden: true }, 'Disconnect');
+  const paintT = (st) => {
+    tStatus.textContent = st.connected ? 'Connected. Tasks with a due date show in the calendar and as pet quests.' : 'Not connected.';
+    tBtn.textContent = st.connected ? 'Change token' : 'Connect';
+    tOff.hidden = !st.connected;
+  };
+  if (api && api.todoist) call(api.todoist.status()).then(paintT).catch(() => {});
+  else tStatus.textContent = 'Unavailable outside the app.';
+  tBtn.addEventListener('click', async () => {
+    tBtn.disabled = true; tStatus.textContent = 'Checking the token…';
+    try { paintT(await call(api.todoist.connect(tIn.value))); tIn.value = ''; await syncTodoist(); renderCal(); } catch (err) { tStatus.textContent = err.message; }
+    tBtn.disabled = false;
+  });
+  tOff.addEventListener('click', async () => { paintT(await call(api.todoist.disconnect())); await syncTodoist(); renderCal(); });
+  sheet.append(
+    h('h3', {}, 'Todoist'),
+    h('div', { class: 'srow' }, h('span', {}, 'Tasks in the calendar', tStatus), h('div', { class: 'row' }, tOff, tBtn)),
+    steps([['In Todoist open ', 'Settings → Integrations → Developer', ' and copy your API token.'], ['Paste it below and press Connect. ', 'Done', ' on a task in the calendar ticks it off in Todoist too.']]),
+    h('div', { class: 'row left' }, h('button', { class: 'btn sm', onclick: () => api && api.app.open('https://app.todoist.com/app/settings/integrations/developer') }, 'Open Todoist settings')),
+    row('API token', 'Stored encrypted on this PC; only sent to Todoist', tIn),
+  );
+
   // Codeforces
   const cfIn = h('input', { type: 'text', placeholder: 'your handle', spellcheck: 'false', maxlength: '40' });
   cfIn.value = settings.cfHandle;
@@ -634,7 +660,7 @@ const SETTINGS_PAGES = [
   ['focus', 'Focus & alarms', ['Focus timer', 'Alarms', 'Focus tools']],
   ['data', 'App & data', ['Windows', 'Updates', 'Your data']],
   ['google', 'Google Calendar', ['Google Calendar']],
-  ['accounts', 'Accounts', ['Spotify', 'Codeforces', 'GitHub']],
+  ['accounts', 'Accounts', ['Todoist', 'Spotify', 'Codeforces', 'GitHub']],
 ];
 let settingsPage = 'look';
 function splitSettings(sheet) {

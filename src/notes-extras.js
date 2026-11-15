@@ -64,6 +64,7 @@ notes.tag = '';
   renderNoteBar = function () {
     baseBar();
     const n = notes.cur; if (!n) return;
+    if (n.board) { const c = n.board.items.length; $('#note-meta').textContent += ` · board · ${c} card${c === 1 ? '' : 's'}`; return; }
     const st = noteStats(n);
     $('#note-meta').textContent += ` · ${st.words} word${st.words === 1 ? '' : 's'} · ${st.minutes} min read` + (st.todos ? ` · ${st.done}/${st.todos} done` : '');
   };
@@ -114,11 +115,13 @@ function duplicateNote() {
   const n = notes.cur; if (!n || n.deleted) return null;
   commitNote();
   const copy = { ...n, id: 'n' + Date.now(), title: `${noteTitle(n)} copy`, created: Date.now(), updated: Date.now(), pinned: false };
+  if (n.board) copy.board = JSON.parse(JSON.stringify(n.board));
   notes.list.push(copy); saveNotes(); renderFolders(); openNote(copy.id);
   toast('Duplicated');
   return copy;
 }
 function toMarkdown(n) {
+  if (n.board) return boardMarkdown(n);
   const d = document.createElement('div'); d.innerHTML = n.html || '';
   const inline = (el) => [...el.childNodes].map((c) => {
     if (c.nodeType === 3) return c.textContent;

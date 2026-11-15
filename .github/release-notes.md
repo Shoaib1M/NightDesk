@@ -1,3 +1,11 @@
+## What's new in 1.0.6
+
+- **Boards in Notes:** a free canvas for research. Paste or drop screenshots, links, PDFs and text anywhere; drag, resize and colour the cards.
+- **Quests from your real work:** the next chapter of your nearest exam, or a Todoist task that is due, earns 30 coins.
+- **Thought bubble:** your pet shows what it needs (🍖 😴 🧶). Click it to see how to help.
+- **Your own pet:** turn any picture into a pixel pet. Plus a new **Frog** in the shop.
+- **Todoist:** tasks with a due date show in the calendar; **Done** ticks them off in Todoist too (Settings → Accounts).
+
 ## New install
 
 1. Download **Nightdesk-Setup-x.y.z.exe** below (under *Assets*).

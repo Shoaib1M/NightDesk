@@ -60,12 +60,17 @@ function sanitize(html) {
 // ---------- data helpers
 const noteTitle = (n) => (n.title || '').trim() || 'Untitled';
 // Plain text of a note, with a space between blocks so words on separate lines never run together.
+// Plain text of a board (see board.js), for search, tags and the list preview.
+function boardText(n) {
+  return (n.board.items || []).map((it) => it.t === 'text' ? it.text : it.t === 'link' ? `${it.title || ''} ${it.url}` : it.t === 'file' ? it.name : '').filter(Boolean).join(' ');
+}
 const noteText = (n) => {
+  if (n.board) return boardText(n).replace(/\s+/g, ' ');
   const d = document.createElement('div');
   d.innerHTML = (n.html || '').replace(/<\/(p|div|h[1-3]|li|blockquote|pre|summary|details)>|<br\s*\/?>/gi, '$& ');
   return d.textContent.replace(/\s+/g, ' ');
 };
-const firstImage = (n) => { const m = /src="(ndimg:\/\/img\/[a-f0-9]{40}\.(?:png|jpe?g|gif|webp))"/.exec(n.html || ''); return m ? m[1] : ''; };
+const firstImage = (n) => { if (n.board) { const i = n.board.items.find((x) => x.t === 'img' && NOTE_IMG.test(x.src)); return i ? i.src : ''; } const m = /src="(ndimg:\/\/img\/[a-f0-9]{40}\.(?:png|jpe?g|gif|webp))"/.exec(n.html || ''); return m ? m[1] : ''; };
 const folderOf = (id) => notes.folders.find((f) => f.id === id);
 const folderName = (id) => (id === 'all' ? 'All Notes' : id === 'trash' ? 'Recently Deleted' : (folderOf(id) || { name: 'Notes' }).name);
 function saveNotes() { store.set('notes', notes.list); }
@@ -216,11 +221,12 @@ function openNote(id) {
   $('#note-page').hidden = !notes.cur;
   $('#note-none').hidden = !!notes.cur;
   for (const id of ['fmt-bar', 'icon-pop', 'more-pop']) { const el = $('#' + id); if (el) el.hidden = true; }
+  showBoard(notes.cur);
   if (notes.cur) {
     $('#note-scroll').scrollTop = 0; // every note opens at its top
     $('#note-title').value = notes.cur.title;
-    $('#note-body').innerHTML = sanitize(notes.cur.html);
-    normalizeBlocks();
+    $('#note-body').innerHTML = notes.cur.board ? '' : sanitize(notes.cur.html);
+    if (!notes.cur.board) normalizeBlocks();
     $('#note-saved').textContent = 'Saved';
     store.set('noteOpen', id);
     renderNoteBar();
@@ -245,6 +251,12 @@ function commitNote() {
   clearTimeout(notes.saveT);
   const n = notes.cur;
   if (!n || n.deleted) return;
+  if (n.board) { // a board saves its cards itself; only the title is read from here
+    if (board.saveT) boardCommit();
+    if ($('#note-title').value !== n.title) { n.title = $('#note-title').value; n.updated = Date.now(); saveNotes(); renderNotesList(); renderNoteBar(); }
+    $('#note-saved').textContent = 'Saved';
+    return;
+  }
   const body = $('#note-body');
   if (notes.phBlock) notes.phBlock.classList.remove('ph');
   const html = body.innerHTML, title = $('#note-title').value;
@@ -277,6 +289,7 @@ function restoreNote() {
   delete n.deleted;
   if (!folderOf(n.folder)) n.folder = DEFAULT_FOLDER;
   saveNotes(); renderFolders(); renderNotesList(); renderNoteBar();
+  if (n.board) showBoard(n); // editable again
   toast(`Restored to ${folderName(n.folder)}`);
 }
 function deleteForever(n = notes.cur) {

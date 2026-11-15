@@ -17,9 +17,9 @@ Everything runs and is stored locally. The only things that touch the internet a
 | **Study** | Subjects with a daily target you adjust with − / +, today / week / streak / level, a 14-day chart by subject, and side-by-side activity heatmaps for your study time, your GitHub contributions and your Codeforces submissions, plus a leaderboard of your best days. All on one screen. |
 | **Exams** | Give each subject an exam date and a chapter checklist with estimated hours (paste a whole syllabus at once). NightDesk works out how much to study per day to finish in time, can set it as your daily target, shows the next exam on the clock and in the calendar, and reminds you the day before. |
 | **Screen time** | While NightDesk runs, it notes which app or site is in front (YouTube in Chrome counts as YouTube) and sorts it into Study & work, Browsing, Communication, Entertainment, Social, Games or Other. A donut of the day, hour-by-hour bars, top apps, the last 7 days, a productivity score, app switches, your longest unbroken stretch and a comment from your pet. Pick any date to see that day, years back, together with what you studied. Only app and site names are saved, never window titles; idle and locked time is not counted. |
-| **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, a shop (3 pets, 12 colour palettes, 5 hats), growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
-| **Calendar** | Month view with add, edit and delete. Double-click a day to fill it like a sticky note, or pick one of six pastel colours in the day panel; text stays readable on every colour. Local by default; two-way sync with Google Calendar once linked. |
-| **Notes** | Folders like iOS Notes and Notion-style pages: headings, lists, checklists, quotes and code, tags, a formatting bar, paste or drop images, search, pinning, duplicate, copy as Markdown and Recently Deleted. Images are stored as files next to your data and copied to the Documents backup. |
+| **Pet** | A pixel pet with food, energy and happiness. Studying feeds it and earns coins. Daily quests, including one from your real work (the next chapter of your nearest exam, or a Todoist task that is due). A thought bubble shows what it needs (🍖 😴 🧶), so you never have to go and check; click it to see how to help. A shop with 4 pets (cat, dog, bunny, frog), 13 colour palettes and 5 hats, or turn any picture into your own pixel pet. Growth stages, break reminders, a start nudge, confetti for wins. Draggable, and can live on your desktop above other windows, walking along whichever monitor it is on. |
+| **Calendar** | Month view with add, edit and delete. Double-click a day to fill it like a sticky note, or pick one of six pastel colours in the day panel; text stays readable on every colour. Local by default; two-way sync with Google Calendar once linked, and Todoist tasks with a due date shown on their day (press **Done** to tick them off in Todoist too). |
+| **Notes** | Folders like iOS Notes and Notion-style pages: headings, lists, checklists, quotes and code, tags, a formatting bar, paste or drop images, search, pinning, duplicate, copy as Markdown and Recently Deleted. **Boards**: a free canvas like an easel or whiteboard for research. Paste or drop screenshots, links, PDFs and text anywhere, drag and resize the cards, colour the sticky notes. Images and files are stored next to your data and copied to the Documents backup. |
 | **Contests** | Upcoming Codeforces rounds with division filters, add-to-calendar and a reminder 30 minutes before. |
 | **Lamp** | The whole window as one solid colour with presets, any custom colour and brightness. Made for using a second monitor as a light. |
 | **Sounds** | Nine synthesised sounds you can layer: white, pink, brown, study, rain, ocean, cabin, fireplace, binaural focus beats. Spotify now-playing and controls once linked. |
@@ -118,7 +118,7 @@ Type your GitHub username and Codeforces handle into the boxes on the Study tab 
 
 ## Optional accounts
 
-Nothing here is required. Both are set up once in **Settings** (gear icon), and the credentials are stored encrypted on your PC, never in this repository.
+Nothing here is required. Each is set up once in **Settings** (gear icon), and the credentials are stored encrypted on your PC, never in this repository.
 
 ### Google Calendar (two-way sync)
 
@@ -137,6 +137,13 @@ Nothing here is required. Both are set up once in **Settings** (gear icon), and 
 3. Paste the Client ID into Settings and press **Connect**.
 
 Playback controls need Spotify Premium.
+
+### Todoist (tasks in the calendar and as pet quests)
+
+1. In Todoist open **Settings → Integrations → Developer** and copy your API token.
+2. Paste it into **Settings → Accounts → Todoist** and press **Connect**.
+
+Tasks with a due date appear in the calendar; **Done** there completes them in Todoist. The most important task due today (or overdue) becomes a daily pet quest. The token is stored encrypted on your PC and only ever sent to Todoist.
 
 ## Shortcuts
 

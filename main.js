@@ -11,6 +11,10 @@ const path = require('path');
 const fs = require('fs');
 const gcal = require('./gcal');
 const spotify = require('./spotify');
+const todoist = require('./todoist');
+// Files dropped on a Notes board (PDFs, documents) are kept next to the images, named by content.
+const NOTE_FILE_EXT = ['pdf', 'txt', 'md', 'csv', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+const NOTE_FILE_NAME = new RegExp(`^[a-f0-9]{40}\\.(${NOTE_FILE_EXT.join('|')})$`);
 const db = require('./db');
 const focusTools = require('./focus-tools');
 const updates = require('./updates');
@@ -556,6 +560,37 @@ function registerIpc() {
     if (mirror) { try { const md = path.join(mirror, 'notes-images'); fs.mkdirSync(md, { recursive: true }); if (!fs.existsSync(path.join(md, name))) fs.copyFileSync(out, path.join(md, name)); } catch (err) { logError('image mirror', err); } }
     return 'ndimg://img/' + name;
   });
+  // Board attachments: saved once (named by content), mirrored, and opened in the PC's own app.
+  handle('notes:saveFile', (bytes, fileName) => {
+    const ext = (/\.([a-z0-9]{1,5})$/i.exec(String(fileName)) || [])[1];
+    if (!ext || !NOTE_FILE_EXT.includes(ext.toLowerCase())) throw new Error(`Only ${NOTE_FILE_EXT.join(', ')} files can be added.`);
+    const buf = Buffer.from(bytes);
+    if (!buf.length || buf.length > 50 * 1024 * 1024) throw new Error('File is empty or over 50 MB.');
+    const name = crypto.createHash('sha1').update(buf).digest('hex') + '.' + ext.toLowerCase();
+    fs.mkdirSync(noteImagesDir(), { recursive: true });
+    const out = path.join(noteImagesDir(), name);
+    if (!fs.existsSync(out)) { fs.writeFileSync(out + '.tmp', buf); fs.renameSync(out + '.tmp', out); }
+    const mirror = db.mirrorFolder();
+    if (mirror) { try { const md = path.join(mirror, 'notes-images'); fs.mkdirSync(md, { recursive: true }); if (!fs.existsSync(path.join(md, name))) fs.copyFileSync(out, path.join(md, name)); } catch (err) { logError('file mirror', err); } }
+    return name;
+  });
+  handle('notes:openFile', async (name) => {
+    if (!NOTE_FILE_NAME.test(String(name))) throw new Error('Unknown file.');
+    let file = path.join(noteImagesDir(), name);
+    const mirror = db.mirrorFolder();
+    if (!fs.existsSync(file) && mirror) file = path.join(mirror, 'notes-images', name);
+    if (!fs.existsSync(file)) throw new Error('That file is missing from this PC.');
+    if (SHOTS) return file; // tests: do not open other apps
+    const err = await shell.openPath(file);
+    if (err) throw new Error(err);
+    return file;
+  });
+
+  handle('todoist:status', () => todoist.status());
+  handle('todoist:connect', (t) => todoist.connect(t));
+  handle('todoist:disconnect', () => todoist.disconnect());
+  handle('todoist:tasks', () => todoist.tasks());
+  handle('todoist:close', (id) => todoist.close(id));
 
   handle('pet:desktop', (on) => setDesktopPet(!!on));
   registerPetIpc();

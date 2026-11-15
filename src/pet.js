@@ -15,19 +15,31 @@ pet.pos = Object.assign({ x: 18, y: 16 }, pet.pos);
 const savePet = () => store.set('pet', pet);
 
 const SHOP = {
-  kind: [['cat', 'Cat', 0], ['dog', 'Dog', 250], ['bunny', 'Bunny', 250]],
+  kind: [['cat', 'Cat', 0], ['dog', 'Dog', 250], ['bunny', 'Bunny', 250], ['frog', 'Frog', 250], ['custom', 'Your own', 0]],
   color: [['ginger', 'Ginger', 0], ['grey', 'Grey', 60], ['cream', 'Cream', 60], ['cocoa', 'Cocoa', 80], ['snow', 'Snow', 80], ['tuxedo', 'Tuxedo', 120], ['mint', 'Mint', 150], ['sakura', 'Sakura', 150],
-    ['sky', 'Sky', 150], ['lavender', 'Lavender', 200], ['galaxy', 'Galaxy', 350], ['gold', 'Gold', 500]],
+    ['sky', 'Sky', 150], ['lily', 'Lily pad', 150], ['lavender', 'Lavender', 200], ['galaxy', 'Galaxy', 350], ['gold', 'Gold', 500]],
   hat: [['', 'No hat', 0], ['party', 'Party hat', 50], ['phones', 'Headphones', 120], ['tophat', 'Top hat', 150], ['grad', 'Grad cap', 200], ['crown', 'Crown', 400]],
 };
 // Each pet comes with its own signature colour, included when you buy it.
-const SIGNATURE = { cat: 'ginger', dog: 'cocoa', bunny: 'snow' };
+const SIGNATURE = { cat: 'ginger', dog: 'cocoa', bunny: 'snow', frog: 'lily' };
 const SHOP_TABS = [['kind', 'Pets'], ['color', 'Colours'], ['hat', 'Hats']];
-const STAGES = { cat: ['Kitten', 'Cat', 'Elder cat'], dog: ['Puppy', 'Dog', 'Elder dog'], bunny: ['Kit', 'Bunny', 'Elder bunny'] };
+const STAGES = { cat: ['Kitten', 'Cat', 'Elder cat'], dog: ['Puppy', 'Dog', 'Elder dog'], bunny: ['Kit', 'Bunny', 'Elder bunny'], frog: ['Froglet', 'Frog', 'Old toad'], custom: ['Little one', 'Grown up', 'Elder'] };
 const REMINDERS = ['Stretch your neck and shoulders.', 'Look at something 20 feet away for 20 seconds.', 'Drink some water.'];
 const buddy = { state: '', cheerUntil: 0, bubble: '', bubbleUntil: 0, sayT: null, blink: false, walking: false, walkT: null,
   nextAct: Date.now() + 9000, chaseUntil: 0, mouseX: 300, lastTick: Date.now(), lastSave: 0, deskOn: null, lastSent: '', tab: 'kind', lastPoke: 0 };
-const petLook = () => ({ kind: pet.kind, color: pet.color, hat: pet.hat });
+if (pet.kind === 'custom' && !pet.custom) pet.kind = 'cat';
+const petLook = () => ({ kind: pet.kind, color: pet.color, hat: pet.hat, ...(pet.kind === 'custom' ? { custom: pet.custom } : {}) });
+
+// What the pet needs right now, shown as a thought bubble so you do not have to keep checking on it.
+const NEEDS = {
+  hunger: { icon: '🍖', say: 'I am hungry. A treat, please?', fix: 'treat' },
+  energy: { icon: '😴', say: 'So sleepy. Can I nap?', fix: 'nap' },
+  joy: { icon: '🧶', say: 'I am bored. Play with me?', fix: 'play' },
+};
+function petNeed() {
+  const k = pet.hunger < 35 ? 'hunger' : pet.energy < 30 ? 'energy' : pet.joy < 35 ? 'joy' : '';
+  return k ? { k, ...NEEDS[k] } : null;
+}
 
 function ensureDay() {
   const d = ymd(new Date());
@@ -155,12 +167,54 @@ function petQuests() {
     { id: 'target', text: 'Hit one subject target', have: targets, goal: 1, coins: 40 },
     { id: 'early', text: `Start a focus block before ${fmtTime(new Date(2000, 0, 1, hh, mm))}`, have: pet.day.early, goal: 1, coins: 25 },
   ][(seed >> 5) % 4];
+  const task = taskQuest();
   return [
     { id: 'min', text: `Study ${fmtDur(mins)}`, have: pet.day.minutes, goal: mins, coins: minCoins },
     { id: 'blocks', text: `Finish ${blocks} focus block${blocks > 1 ? 's' : ''}`, have: pet.day.blocks, goal: blocks, coins: blockCoins },
     care,
+    ...(task ? [task] : []),
   ];
 }
+
+// One quest a day from your real work: a Todoist task that is due, or else the next chapter of the
+// subject whose exam is nearest. Picked once per day, so finishing it does not swap in another.
+function pickTask() {
+  const due = typeof todoistDueNow === 'function' && cal.todoistOn ? todoistDueNow().sort((a, b) => b.priority - a.priority) : [];
+  if (due.length) return { src: 'todoist', id: due[0].id, text: `Finish “${due[0].title}”`, at: Date.now() };
+  const today = ymd(new Date());
+  const withWork = study.subjects.filter((s) => (s.chapters || []).some((c) => !c.done));
+  const s = withWork.filter((x) => x.exam && x.exam >= today).sort((a, b) => a.exam.localeCompare(b.exam))[0] || withWork[0];
+  if (!s) return null;
+  const c = s.chapters.find((x) => !x.done);
+  return { src: 'chapter', sid: s.id, id: c.id, text: `Finish ${c.name || 'the next chapter'} · ${s.name}`, at: Date.now() };
+}
+function taskQuest() {
+  const claimed = pet.day.claimed.includes('task');
+  let t = pet.day.task;
+  if (t && t.src === 'chapter' && !claimed) {
+    const s = study.subjects.find((x) => x.id === t.sid), c = s && (s.chapters || []).find((x) => x.id === t.id);
+    if (!c) t = null; // the chapter was removed: pick again
+  }
+  if (!t && !claimed) { t = pickTask(); pet.day.task = t; }
+  if (!t) return null;
+  let have = 0, go;
+  if (t.src === 'chapter') {
+    const s = study.subjects.find((x) => x.id === t.sid), c = s && (s.chapters || []).find((x) => x.id === t.id);
+    have = c && c.done ? 1 : 0;
+    go = () => openSyllabus(t.sid);
+  } else {
+    // Ticked off here, or gone from Todoist's due list since it was picked (done in the Todoist app).
+    const gone = cal.todoistOn && cal.todoistAt > t.at && !todoistDueNow().some((x) => x.id === t.id);
+    have = (pet.day.doneTasks || []).includes(t.id) || gone ? 1 : 0;
+    go = () => { const x = cal.todoist.find((y) => y.id === t.id); if (x) cal.sel = x.allDay ? x.date : ymd(new Date(x.at)); showView('calendar'); };
+  }
+  return { id: 'task', text: t.text, have, goal: 1, coins: 30, go, hint: t.src === 'todoist' ? 'From Todoist' : 'From your syllabus' };
+}
+on('taskDone', (d) => {
+  ensureDay();
+  pet.day.doneTasks = [...(pet.day.doneTasks || []), d.id];
+  savePet(); renderPetView();
+});
 function claimQuest(q) {
   if (q.have < q.goal || pet.day.claimed.includes(q.id)) return;
   pet.day.claimed.push(q.id);
@@ -213,6 +267,13 @@ function petNap() {
   savePet(); renderPetView();
 }
 function shopClick(type, id, price) {
+  if (type === 'kind' && id === 'custom') {
+    if (!pet.custom) return pickPetPicture();
+    pet.kind = 'custom';
+    if (!pet.owned.kind.includes('custom')) pet.owned.kind.push('custom');
+    savePet(); renderPetView(); buddyTick();
+    return;
+  }
   if (!pet.owned[type].includes(id)) {
     if (pet.coins < price) return buddySay(`${price - pet.coins} more coins needed. That is ${fmtDur(price - pet.coins)} of study.`);
     pet.coins -= price;
@@ -226,6 +287,69 @@ function shopClick(type, id, price) {
     pet.color = sig;
   }
   savePet(); renderPetView(); buddyTick();
+}
+
+// ---------- your own pet from a picture (like a game skin)
+// The picture is turned into a 32 x 36 pixel sprite: a plain background is cut away (flood fill
+// from the edges), the subject is cropped and fitted where the body goes, so hats still sit on top,
+// and edges are made crisp. Stored as RGBA bytes in base64 on the pet itself.
+function pickPetPicture() {
+  const f = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/gif,image/webp' });
+  f.addEventListener('change', () => { if (f.files[0]) usePetPicture(f.files[0]); });
+  f.click();
+}
+async function petSpriteFrom(blob) {
+  const bmp = await createImageBitmap(blob);
+  const M = 96, sc = Math.min(M / bmp.width, M / bmp.height, 1e9);
+  const mw = Math.max(1, Math.round(bmp.width * sc)), mh = Math.max(1, Math.round(bmp.height * sc));
+  const mid = h('canvas', { width: mw, height: mh }), mg = mid.getContext('2d', { willReadFrequently: true });
+  mg.imageSmoothingQuality = 'high';
+  mg.drawImage(bmp, 0, 0, mw, mh);
+  const img = mg.getImageData(0, 0, mw, mh), d = img.data, at = (x, y) => (y * mw + x) * 4;
+  // Background: the corners, if they are opaque and about the same colour.
+  const corners = [at(0, 0), at(mw - 1, 0), at(0, mh - 1), at(mw - 1, mh - 1)];
+  const dist = (i, j) => Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]);
+  if (corners.every((c) => d[c + 3] > 200) && corners.every((c) => dist(c, corners[0]) < 60)) {
+    const seen = new Uint8Array(mw * mh), stack = [];
+    for (let x = 0; x < mw; x++) stack.push([x, 0], [x, mh - 1]);
+    for (let y = 0; y < mh; y++) stack.push([0, y], [mw - 1, y]);
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      if (x < 0 || y < 0 || x >= mw || y >= mh || seen[y * mw + x]) continue;
+      seen[y * mw + x] = 1;
+      const i = at(x, y);
+      if (dist(i, corners[0]) > 70) continue;
+      d[i + 3] = 0;
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+  }
+  // Crop to what is left.
+  let x0 = mw, y0 = mh, x1 = -1, y1 = -1;
+  for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) if (d[at(x, y) + 3] > 60) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) throw new Error('The picture looks empty.');
+  mg.putImageData(img, 0, 0);
+  const W = PET_W * 2, H = PET_H * 2, box = { x: 2, y: 10, w: 24, h: 26 };
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1, k = Math.min(box.w / cw, box.h / ch);
+  const ow = Math.max(1, Math.round(cw * k)), oh = Math.max(1, Math.round(ch * k));
+  const out = h('canvas', { width: W, height: H }), og = out.getContext('2d', { willReadFrequently: true });
+  og.imageSmoothingQuality = 'high';
+  og.drawImage(mid, x0, y0, cw, ch, box.x + Math.floor((box.w - ow) / 2), box.y + box.h - oh, ow, oh);
+  const px = og.getImageData(0, 0, W, H).data;
+  for (let i = 3; i < px.length; i += 4) px[i] = px[i] > 110 ? 255 : 0; // crisp pixel edges
+  let s = '';
+  for (let i = 0; i < px.length; i += 8192) s += String.fromCharCode(...px.subarray(i, i + 8192));
+  return btoa(s);
+}
+async function usePetPicture(file) {
+  if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) return toast('Pick a PNG, JPEG, GIF or WebP picture.');
+  if (file.size > 15 * 1024 * 1024) return toast('That picture is over 15 MB.');
+  try {
+    pet.custom = await petSpriteFrom(file);
+    pet.kind = 'custom';
+    if (!pet.owned.kind.includes('custom')) pet.owned.kind.push('custom');
+    buddy.tab = 'kind';
+    savePet(); celebrate('Say hi to your own pet!'); renderPetView(); buddyTick();
+  } catch (err) { toast('Could not use that picture: ' + err.message); }
 }
 
 // ---------- position, dragging, roaming
@@ -330,6 +454,18 @@ function buddyTick() {
     : pomo.running ? (pomo.mode === 'focus' ? 'work' : 'sleep') : buddy.walking ? 'walk' : mood.sad ? 'sad' : 'idle';
   const inApp = settings.buddy && !pet.desktop && settings.view !== 'lamp';
   el.hidden = !inApp;
+  // Thought bubble with what it needs (not while you focus or it sleeps, and not over a speech bubble).
+  const need = petNeed();
+  const thinking = settings.buddy && need && !['work', 'sleep'].includes(state) ? need.icon : '';
+  const th = $('#buddy-think');
+  th.hidden = !thinking || now < buddy.bubbleUntil;
+  if (thinking) th.firstChild.textContent = thinking;
+  if (need && thinking && need.k !== buddy.need) {
+    pet.saidNeed = pet.saidNeed || {};
+    if (now - (pet.saidNeed[need.k] || 0) > 3 * 3600000) { pet.saidNeed[need.k] = now; buddySay(need.say, 8000); savePet(); }
+  }
+  buddy.need = need ? need.k : '';
+  th.hidden = !thinking || Date.now() < buddy.bubbleUntil; // never at the same time as words
   if (inApp) {
     if (state !== buddy.state) { for (const c of ['idle', 'work', 'sleep', 'cheer', 'walk', 'sad']) el.classList.toggle(c, c === state); }
     const cv = $('#buddy-cv');
@@ -345,7 +481,7 @@ function buddyTick() {
   const wantDesk = settings.buddy && pet.desktop;
   if (wantDesk !== buddy.deskOn) { buddy.deskOn = wantDesk; buddy.lastSent = ''; stopWalk(); api.pet.desktop(wantDesk); }
   if (wantDesk) {
-    const s = { look: petLook(), scale: stage.scale, cls: state, closed: state === 'sleep', sad: mood.sad && state !== 'cheer', bubble: now < buddy.bubbleUntil ? buddy.bubble : '' };
+    const s = { look: petLook(), scale: stage.scale, cls: state, closed: state === 'sleep', sad: mood.sad && state !== 'cheer', bubble: now < buddy.bubbleUntil ? buddy.bubble : '', think: now < buddy.bubbleUntil ? '' : thinking };
     const j = JSON.stringify(s);
     if (j !== buddy.lastSent) { buddy.lastSent = j; api.pet.state(s); }
     // On the desktop the pet strolls along whichever monitor it is on.
@@ -370,6 +506,8 @@ function paintPetLive() {
     if (bar) { bar.style.width = pet[k] + '%'; bar.parentNode.nextSibling.textContent = Math.round(pet[k]); }
   }
   $('#pet-coins').textContent = `${pet.coins} coins`;
+  const need = petNeed();
+  $$('#pet-acts [data-act]').forEach((b) => b.classList.toggle('pri', !!need && b.dataset.act === need.fix));
 }
 
 function renderPetView() {
@@ -379,15 +517,16 @@ function renderPetView() {
     h('div', { class: 'pbar', 'data-k': k }, h('span', {}, label), h('div', { class: 'pb' }, h('i')), h('b', {}, ''))));
   $('#pet-acts').replaceChildren(
     h('button', { class: 'btn', onclick: petPoke }, 'Pet'),
-    h('button', { class: 'btn', onclick: petPlay }, 'Play'),
-    h('button', { class: 'btn', onclick: petTreat }, 'Treat · 5'),
-    h('button', { class: 'btn', onclick: petNap }, 'Nap'));
+    h('button', { class: 'btn', 'data-act': 'play', onclick: petPlay }, 'Play'),
+    h('button', { class: 'btn', 'data-act': 'treat', onclick: petTreat }, 'Treat · 5'),
+    h('button', { class: 'btn', 'data-act': 'nap', onclick: petNap }, 'Nap'));
 
   $('#pet-quests').replaceChildren(...petQuests().map((q) => {
     const done = q.have >= q.goal, claimed = pet.day.claimed.includes(q.id);
     const bar = h('i'); bar.style.width = Math.min(100, (q.have / q.goal) * 100) + '%';
-    return h('div', { class: 'quest' + (claimed ? ' got' : '') },
-      h('div', { class: 'qt' }, h('span', {}, q.text), h('div', { class: 'pb' }, bar)),
+    const label = q.go ? h('button', { class: 'qlink', title: 'Open it', onclick: q.go }, q.text) : h('span', {}, q.text);
+    return h('div', { class: 'quest' + (claimed ? ' got' : '') + (q.id === 'task' ? ' work' : ''), 'data-q': q.id },
+      h('div', { class: 'qt' }, label, q.hint && h('small', {}, q.hint), h('div', { class: 'pb' }, bar)),
       h('button', { class: 'btn sm' + (done && !claimed ? ' pri' : ''), disabled: !done || claimed, onclick: () => claimQuest(q) },
         claimed ? 'Claimed' : done ? `Claim ${q.coins}` : `${q.coins} coins`));
   }));
@@ -399,11 +538,16 @@ function renderPetView() {
     const owned = pet.owned[buddy.tab].includes(id), worn = pet[buddy.tab] === id;
     const cv = h('canvas', { width: PET_W, height: PET_H });
     const look = { ...petLook(), [buddy.tab]: id };
-    if (buddy.tab === 'kind' && !worn) look.color = SIGNATURE[id];
+    if (buddy.tab === 'kind' && !worn && SIGNATURE[id]) look.color = SIGNATURE[id];
+    if (id === 'custom') look.custom = pet.custom;
+    const mine = buddy.tab === 'kind' && id === 'custom';
+    if (mine && !pet.custom) { look.kind = 'cat'; look.color = 'grey'; cv.style.opacity = '.35'; }
     drawPet(cv.getContext('2d'), look);
-    return h('button', { class: 'item' + (worn ? ' on' : ''), onclick: () => shopClick(buddy.tab, id, price) },
-      cv, h('b', {}, label), h('small', {}, worn ? (buddy.tab === 'hat' ? 'Wearing' : 'Chosen') : owned ? 'Owned' : `${price} coins`));
-  }));
+    const tag = mine && !pet.custom ? 'Upload a picture' : worn ? (buddy.tab === 'hat' ? 'Wearing' : 'Chosen') : owned ? 'Owned' : `${price} coins`;
+    return h('button', { class: 'item' + (worn ? ' on' : '') + (mine ? ' mine' : ''), title: mine ? 'Turn any picture into your pet' : '', onclick: () => shopClick(buddy.tab, id, price) },
+      cv, h('b', {}, label), h('small', {}, tag));
+  }), ...(buddy.tab === 'kind' && pet.custom ? [h('button', { class: 'item add', title: 'Use a different picture', onclick: pickPetPicture }, h('span', { class: 'plus' }, '＋'), h('b', {}, 'New picture'), h('small', {}, 'PNG with a plain background works best'))] : []));
+  if (buddy.tab === 'color' && pet.kind === 'custom') $('#shop').prepend(h('p', { class: 'hint shop-note' }, 'Colours change the cat, dog and bunny. Your own pet keeps its picture’s colours.'));
 
   const opt = (label, hint, key, after) => {
     const i = h('input', { type: 'checkbox', class: 'sw' });
@@ -425,5 +569,8 @@ function renderPetView() {
 
 $('#pet-name').addEventListener('change', () => { pet.name = $('#pet-name').value.trim().slice(0, 16) || pet.name; savePet(); renderPetView(); });
 on('view', (v) => { if (v === 'pet') renderPetView(); buddyTick(); });
+on('subjects', renderPetView);
+on('todoist', renderPetView);
+$('#buddy-think').addEventListener('click', () => showView('pet'));
 on('settings', buddyTick);
 api.pet.onOpen(() => showView('pet'));

@@ -6,7 +6,40 @@ const cal = {
   sel: ymd(new Date()),
   google: [], connected: false, editing: null, syncedAt: null, error: '',
   contests: store.get('cfCache', []), // last list fetched, so contests still show offline
+  todoist: store.get('todoistCache', []), todoistOn: store.get('todoistCache', []).length > 0, todoistError: '',
 };
+const TODOIST_RED = '#e44332';
+const todoistEvents = () => cal.todoist.map((t) => {
+  const start = t.allDay ? parseYmd(t.date) : new Date(t.at);
+  return { id: 'td' + t.id, taskId: t.id, src: 'todoist', title: t.title, allDay: t.allDay, start, end: t.allDay ? addDays(start, 1) : new Date(+start + 30 * 60000),
+    color: TODOIST_RED, editable: false, url: `https://app.todoist.com/app/task/${t.id}` };
+});
+// Due today or earlier (all-day dates compare as days; timed ones by the clock).
+const todoistDueNow = () => { const today = ymd(new Date()); return cal.todoist.filter((t) => (t.allDay ? t.date : ymd(new Date(t.at))) <= today); };
+
+async function syncTodoist() {
+  if (!api || !api.todoist) return;
+  try {
+    cal.todoistOn = (await call(api.todoist.status())).connected;
+    if (cal.todoistOn) { cal.todoist = await call(api.todoist.tasks()); cal.todoistAt = Date.now(); }
+    else cal.todoist = [];
+    store.set('todoistCache', cal.todoist);
+    cal.todoistError = '';
+  } catch (err) { cal.todoistError = err.message; }
+  emit('todoist');
+}
+async function finishTodoist(id) {
+  const t = cal.todoist.find((x) => x.id === id);
+  try {
+    await call(api.todoist.close(id));
+    cal.todoist = cal.todoist.filter((x) => x.id !== id);
+    store.set('todoistCache', cal.todoist);
+    emit('taskDone', { src: 'todoist', id });
+    toast(`Done: ${t ? t.title : 'task'}`);
+    syncTodoist().then(renderCal); // a repeating task comes back with its next date
+  } catch (err) { toast(err.message); }
+  renderCal();
+}
 const localEvents = () => store.get('events', []);
 const gridStart = () => addDays(cal.month, -((cal.month.getDay() + 6) % 7));
 const toDate = (s, allDay) => (allDay ? parseYmd(s) : new Date(s));
@@ -23,6 +56,7 @@ function allEvents() {
     }
   }
   if (typeof examEvents === 'function') out.push(...examEvents());
+  if (cal.todoistOn) out.push(...todoistEvents());
   return out.sort((a, b) => a.start - b.start);
 }
 function eventsOn(events, day) {
@@ -84,9 +118,9 @@ async function syncCalendar() {
       } else cal.google = [];
       cal.error = '';
     } catch (err) { cal.error = err.message; }
+    await syncTodoist();
   }
   renderCal();
- 
 }
 
 function renderCal() {
@@ -99,6 +133,7 @@ function renderCal() {
   // If Google ever signs out, one click reconnects with the saved credentials (just approve in the browser).
   const signedOut = !!(cal.gst && cal.gst.configured && !cal.gst.connected);
   if (signedOut && !cal.error) st.textContent = 'Google Calendar signed out · press Reconnect';
+  if (cal.todoistOn && !cal.error) st.textContent += cal.todoistError ? ` · Todoist: ${cal.todoistError}` : ' · Todoist';
   if (cal.remindReconnect && !cal.error) st.textContent = `Google Calendar · reconnect before ${new Date(cal.gst.connectedAt + GOOGLE_TEST_LIMIT).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`;
   let rc = $('#cal-reconnect');
   if ((cal.error && /expired|sign.?in/i.test(cal.error)) || signedOut || cal.remindReconnect) {
@@ -132,8 +167,9 @@ function renderCal() {
   $('#day-list').replaceChildren(...todays.map((e) => {
     const el = h('div', { class: 'ev' },
       h('div', { class: 't' }, e.title),
-      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces', exam: 'Exam' }[e.src]),
+      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces', exam: 'Exam', todoist: 'Todoist' }[e.src]),
       h('div', { class: 'a' },
+        e.src === 'todoist' && h('button', { class: 'btn sm pri', onclick: () => finishTodoist(e.taskId) }, 'Done'),
         e.editable && h('button', { class: 'btn sm', onclick: () => editEvent(e) }, 'Edit'),
         e.editable && h('button', { class: 'btn sm danger', onclick: () => deleteEvent(e) }, 'Delete'),
         e.url && h('button', { class: 'btn sm', onclick: () => api && api.app.open(e.url) }, 'Open')));

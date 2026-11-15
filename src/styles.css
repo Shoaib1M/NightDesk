@@ -347,6 +347,20 @@ main { position: fixed; inset: 0; }
 #buddy .heart { position: absolute; left: 30px; bottom: 80px; color: #e5484d; font-size: 18px; animation: heart .9s ease-out forwards; }
 @keyframes heart { to { opacity: 0; transform: translateY(-34px) scale(1.5); } }
 .bubble { max-width: 230px; margin: 0 0 8px 6px; padding: 8px 12px; border-radius: 12px 12px 12px 3px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 12px; line-height: 1.4; }
+/* thought bubble: what the pet needs */
+.think { position: relative; pointer-events: auto; margin: 0 0 10px 38px; padding: 3px 10px; border-radius: 18px; border: 1px solid var(--line); background: var(--card);
+  box-shadow: var(--shadow); font-size: 20px; line-height: 1.25; cursor: pointer; animation: bob 2.4s ease-in-out infinite; }
+.think:hover { border-color: var(--accent); }
+.think::before, .think::after { content: ''; position: absolute; border: 1px solid var(--line); background: var(--card); border-radius: 50%; }
+.think::before { width: 9px; height: 9px; left: 4px; bottom: -8px; }
+.think::after { width: 5px; height: 5px; left: -3px; bottom: -15px; }
+.quest .qlink { all: unset; cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+.quest .qlink:hover { color: var(--accent); }
+.quest .qt small { margin-top: -4px; font-size: 11px; color: var(--muted); }
+.quest.work .pb i { background: #e0a040; }
+.item.add .plus { display: grid; place-items: center; width: 64px; height: 72px; font-size: 30px; color: var(--muted); }
+.item.add small { text-align: center; }
+.shop-note { grid-column: 1 / -1; margin: 0; }
 .confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; top: -14px; width: 8px; height: 12px; border-radius: 2px; animation: fall 2.4s linear forwards; }
 @keyframes fall { to { transform: translateY(105vh) rotate(720deg); } }
@@ -473,6 +487,44 @@ main { position: fixed; inset: 0; }
 .ni-text small { font-size: 11px; color: var(--muted); }
 .ni-todo.all { color: #3fa96b; }
 .ni-thumb { width: 42px; height: 42px; object-fit: cover; border-radius: 7px; flex: none; border: 1px solid var(--line); }
+/* boards: a free canvas in Notes */
+.note-page.boardmode .note-scroll { flex: none; overflow: visible; }
+.note-page.boardmode .note-doc { max-width: none; margin: 0; padding: 12px 18px 0; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; }
+.note-page.boardmode .note-icon { font-size: 26px; margin: 0; }
+.note-page.boardmode .note-add-icon, .note-page.boardmode #note-body { display: none; }
+.note-page.boardmode #note-title { font-size: 22px; grid-column: 2; }
+.note-page.boardmode .note-icon.none + .note-add-icon + #note-title { grid-column: 1 / -1; }
+.note-page.boardmode .note-meta { grid-column: 1 / -1; margin: 4px 0 0; padding-bottom: 10px; }
+.board { position: relative; flex: 1; min-height: 0; overflow: auto; outline: none; background-color: var(--card2);
+  background-image: radial-gradient(circle, var(--line) 1.2px, transparent 1.3px); background-size: 22px 22px; background-attachment: local; }
+.board.drop { box-shadow: inset 0 0 0 2px var(--accent); }
+.board-tools { position: sticky; top: 10px; left: 10px; z-index: 5; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px; padding: 6px 8px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); max-width: calc(100% - 20px); }
+.board-tools .hint { margin: 0 4px; font-size: 11.5px; }
+.board-empty { position: sticky; left: 0; top: 40%; margin: 0; text-align: center; color: var(--muted); pointer-events: none; height: 0; }
+.board-sheet { position: absolute; left: 0; top: 0; }
+.bi { position: absolute; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .22); background: var(--card); border: 1px solid var(--line); cursor: grab; user-select: none; }
+.bi.moving { cursor: grabbing; box-shadow: 0 10px 28px rgba(0, 0, 0, .35); z-index: 3; }
+.bi-text { background: var(--note); border-color: rgba(0, 0, 0, .08); }
+.bi-text textarea { display: block; width: 100%; height: 100%; resize: none; border: 0 !important; background: none !important; color: #2b2326; padding: 16px 14px 12px !important;
+  font-family: inherit; font-size: 14px; line-height: 1.45; outline: none; cursor: text; box-shadow: none !important; }
+.bi-img { padding: 0; overflow: hidden; background: transparent; }
+.bi-img img { display: block; width: 100%; height: auto; pointer-events: none; }
+.bi-link, .bi-file { padding: 12px 14px; cursor: pointer; }
+.bl { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bl-ic { font-size: 22px; flex: none; }
+.bl b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl small { display: block; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl > div { min-width: 0; }
+.bi-grip { position: absolute; left: 0; right: 0; top: 0; height: 12px; cursor: grab; }
+.bi-x, .bi-col { position: absolute; top: -9px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  font-size: 10px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s; padding: 0; }
+.bi-x { right: -9px; }
+.bi-col { right: 15px; background: conic-gradient(#fff3a3, #ffd3e0, #c9f2d0, #cfe6ff, #e4d9ff, #fff3a3); }
+.bi-size { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; opacity: 0;
+  background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 60%, transparent 60%, transparent 72%, var(--muted) 72%, var(--muted) 82%, transparent 82%); }
+.bi:hover .bi-x, .bi:hover .bi-col, .bi:hover .bi-size, .bi:focus-within .bi-x, .bi:focus-within .bi-col { opacity: 1; }
+.board.ro .bi { cursor: default; }
 /* column 3: the page */
 .note-wrap { position: relative; min-width: 0; min-height: 0; display: flex; }
 .note-none { flex: 1; display: grid; place-items: center; }

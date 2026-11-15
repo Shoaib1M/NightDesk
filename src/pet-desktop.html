@@ -17,6 +17,11 @@
   body.cheer canvas { animation: hop .45s ease-out infinite; }
   #say { max-width: 220px; margin: 0 0 8px 4px; padding: 8px 12px; border-radius: 12px 12px 12px 3px; background: #111112; color: #e4e4e6;
     border: 1px solid #2c2c31; font-size: 12px; line-height: 1.4; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); }
+  #think { position: relative; align-self: flex-start; margin: 0 0 6px 34px; padding: 4px 9px; border-radius: 16px; background: #fff; font-size: 20px; line-height: 1.2;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .35); cursor: pointer; animation: bob 2.4s ease-in-out infinite; }
+  #think::before, #think::after { content: ''; position: absolute; background: #fff; border-radius: 50%; box-shadow: 0 2px 5px rgba(0, 0, 0, .3); }
+  #think::before { width: 9px; height: 9px; left: 2px; bottom: -8px; }
+  #think::after { width: 5px; height: 5px; left: -4px; bottom: -15px; }
   #zz { position: absolute; left: 70px; bottom: 70px; font-size: 14px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000; opacity: 0; }
   body.sleep #zz { animation: zz 2.6s linear infinite; }
   [hidden] { display: none !important; }
@@ -28,6 +33,7 @@
 <body>
 <div id="wrap">
   <div id="say" hidden></div>
+  <div id="think" hidden title="Click to see what your pet needs"></div>
   <span id="zz">z</span>
   <div id="flipper"><canvas id="cv" width="16" height="18" title="Drag me. Click to open Nightdesk."></canvas></div>
 </div>
