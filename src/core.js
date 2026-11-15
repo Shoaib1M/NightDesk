@@ -219,6 +219,7 @@ const ICON = {
   lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   pet: '<circle cx="12" cy="15.5" r="3.5"/><circle cx="5.5" cy="10.5" r="1.8"/><circle cx="9.5" cy="6" r="1.8"/><circle cx="14.5" cy="6" r="1.8"/><circle cx="18.5" cy="10.5" r="1.8"/>',
   notes: '<path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12.5h7M9 16.5h5"/>',
+  todo: '<path d="M4 4h16v10.5L14.5 20H4z"/><path d="M14.5 20v-5.5H20M8 9h8M8 12.5h5"/>',
   mini: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10v4M10.5 10v4M14 12h3"/>',
   screen: '<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/><path d="M12 7.5v3.2l2 1.3"/>',
   sound: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
@@ -240,7 +241,7 @@ const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 // ---------- navigation
 const VIEWS = [
   ['clock', 'Clock'], ['focus', 'Focus'], ['timer', 'Timer'], ['stopwatch', 'Stopwatch'], ['alarm', 'Alarm'],
-  ['study', 'Study'], ['screen', 'Screen'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
+  ['study', 'Study'], ['todo', 'To-do'], ['screen', 'Screen'], ['pet', 'Pet'], ['calendar', 'Calendar'], ['notes', 'Notes'], ['contests', 'Contests'], ['lamp', 'Lamp'],
 ];
 
 // Tabs can be switched off in Settings › Tabs (Clock always stays). A hidden tab leaves the dock and
@@ -344,6 +345,7 @@ const TAB_HINTS = {
   clock: 'Always on',
   alarm: 'Alarms you already set still ring when this is off',
   study: 'Study time is still logged from Focus when this is off',
+  todo: 'A board of post-it notes and sections you arrange yourself',
   screen: 'Turn tracking itself on or off under Screen time',
   pet: 'The pet on screen has its own switch under Appearance',
   contests: 'Off also stops Codeforces reminders and calendar entries',

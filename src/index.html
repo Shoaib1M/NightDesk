@@ -138,6 +138,29 @@
     </div>
   </section>
 
+  <section class="view pad" id="v-todo">
+    <div class="todo">
+      <div class="todo-bar">
+        <h1>To-do</h1>
+        <span class="status" id="todo-status"></span>
+        <span class="sp"></span>
+        <div class="todo-add" id="todo-add" aria-label="New post-it"></div>
+        <button class="btn sm" id="todo-section">＋ Section</button>
+        <div class="todo-zoom">
+          <button class="btn sm" id="todo-zout" aria-label="Zoom out" title="Zoom out (Ctrl + scroll)">−</button>
+          <button class="btn sm" id="todo-zreset" title="Back to 100%">100%</button>
+          <button class="btn sm" id="todo-zin" aria-label="Zoom in" title="Zoom in (Ctrl + scroll)">＋</button>
+          <button class="btn sm" id="todo-fit" title="Fit everything on screen">Fit</button>
+        </div>
+      </div>
+      <div class="todo-canvas" id="todo-canvas" tabindex="0" aria-label="To-do board">
+        <div class="todo-size" id="todo-size"><div class="todo-sheet" id="todo-sheet"></div></div>
+      </div>
+      <input type="date" id="todo-date" class="todo-date" aria-label="Due date" tabindex="-1">
+      <div class="pop-menu todo-menu" id="todo-menu" hidden></div>
+    </div>
+  </section>
+
   <section class="view pad" id="v-pet">
     <div class="petv">
       <div class="card pet-left">
@@ -335,6 +358,7 @@
 <script src="notes.js"></script>
 <script src="notes-extras.js"></script>
 <script src="board.js"></script>
+<script src="todo.js"></script>
 <script src="boot.js"></script>
 </body>
 </html>

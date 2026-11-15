@@ -11,7 +11,8 @@
 
   // Number keys: all of them work now (2-9 used to do nothing).
   press('2'); check('key 2 opens Focus', settings.view === 'focus', settings.view);
-  press('9'); check('key 9 opens Calendar', settings.view === 'calendar', settings.view);
+  press('7'); check('key 7 opens To-do', settings.view === 'todo', settings.view);
+  press('9'); check('key 9 opens Pet', settings.view === 'pet', settings.view);
 
   // Open Settings: pages down the side.
   await openSettings();
@@ -38,8 +39,8 @@
   check('the Settings page stays open on Tabs while switching', !tabsPage.hidden);
   closeSettings();
 
-  // Number keys follow the dock: with Contests and Lamp gone, there are 10 tabs and 9 keys.
-  press('9'); check('key 9 still opens the 9th shown tab (Calendar)', settings.view === 'calendar', settings.view);
+  // Number keys follow the dock: with Contests and Lamp gone, there are 11 tabs and 9 keys.
+  press('9'); check('key 9 still opens the 9th shown tab (Pet)', settings.view === 'pet', settings.view);
 
   // Contests off: no contest entries in the calendar.
   const realContests = cal.contests;

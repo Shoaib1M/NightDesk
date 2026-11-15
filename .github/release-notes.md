@@ -1,3 +1,7 @@
+## What's new in 1.0.7
+
+- **To-do tab:** a jamboard of post-it notes. Starts as a To do → Scheduled → In progress → Done pipeline, but the sections are yours to add, rename, move, resize and recolour. Drag notes between them, give them due dates (shown in the calendar and as a pet quest), and finishing one in a Done section earns your pet 5 coins.
+
 ## What's new in 1.0.6
 
 - **Boards in Notes:** a free canvas for research. Paste or drop screenshots, links, PDFs and text anywhere; drag, resize and colour the cards.

@@ -67,5 +67,5 @@ const throws = async (fn) => { try { await fn(); return ''; } catch (e) { return
 
   fs.rmSync(data, { recursive: true, force: true });
   if (fails.length) { console.log('FAIL test-todoist\n' + fails.join('\n')); process.exit(1); }
-  console.log(JSON.stringify({ ok: true, checks: count }));
+  console.log(JSON.stringify({ ok: true, checks: count }, null, 1));
 })();

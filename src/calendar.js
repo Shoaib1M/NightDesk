@@ -57,6 +57,7 @@ function allEvents() {
   }
   if (typeof examEvents === 'function') out.push(...examEvents());
   if (cal.todoistOn) out.push(...todoistEvents());
+  if (typeof todoEvents === 'function') out.push(...todoEvents());
   return out.sort((a, b) => a.start - b.start);
 }
 function eventsOn(events, day) {
@@ -167,9 +168,10 @@ function renderCal() {
   $('#day-list').replaceChildren(...todays.map((e) => {
     const el = h('div', { class: 'ev' },
       h('div', { class: 't' }, e.title),
-      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces', exam: 'Exam', todoist: 'Todoist' }[e.src]),
+      h('div', { class: 'm' }, (e.allDay ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`) + ' · ' + { google: 'Google', local: 'This PC', cf: 'Codeforces', exam: 'Exam', todoist: 'Todoist', todo: 'To-do board' }[e.src]),
       h('div', { class: 'a' },
         e.src === 'todoist' && h('button', { class: 'btn sm pri', onclick: () => finishTodoist(e.taskId) }, 'Done'),
+        e.src === 'todo' && h('button', { class: 'btn sm', onclick: () => showTodoNote(e.noteId) }, 'Open'),
         e.editable && h('button', { class: 'btn sm', onclick: () => editEvent(e) }, 'Edit'),
         e.editable && h('button', { class: 'btn sm danger', onclick: () => deleteEvent(e) }, 'Delete'),
         e.url && h('button', { class: 'btn sm', onclick: () => api && api.app.open(e.url) }, 'Open')));

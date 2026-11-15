@@ -181,6 +181,8 @@ function petQuests() {
 function pickTask() {
   const due = typeof todoistDueNow === 'function' && cal.todoistOn ? todoistDueNow().sort((a, b) => b.priority - a.priority) : [];
   if (due.length) return { src: 'todoist', id: due[0].id, text: `Finish “${due[0].title}”`, at: Date.now() };
+  const notesDue = typeof todoDueNow === 'function' && tabOn('todo') ? todoDueNow().sort((a, b) => a.due.localeCompare(b.due)) : [];
+  if (notesDue.length) return { src: 'todo', id: notesDue[0].id, text: `Finish “${notesDue[0].text.trim().split('\n')[0].slice(0, 50)}”`, at: Date.now() };
   const today = ymd(new Date());
   const withWork = study.subjects.filter((s) => (s.chapters || []).some((c) => !c.done));
   const s = withWork.filter((x) => x.exam && x.exam >= today).sort((a, b) => a.exam.localeCompare(b.exam))[0] || withWork[0];
@@ -195,6 +197,7 @@ function taskQuest() {
     const s = study.subjects.find((x) => x.id === t.sid), c = s && (s.chapters || []).find((x) => x.id === t.id);
     if (!c) t = null; // the chapter was removed: pick again
   }
+  if (t && t.src === 'todo' && !claimed && typeof todo !== 'undefined' && !todo.notes.some((n) => n.id === t.id)) t = null; // post-it removed
   if (!t && !claimed) { t = pickTask(); pet.day.task = t; }
   if (!t) return null;
   let have = 0, go;
@@ -202,13 +205,17 @@ function taskQuest() {
     const s = study.subjects.find((x) => x.id === t.sid), c = s && (s.chapters || []).find((x) => x.id === t.id);
     have = c && c.done ? 1 : 0;
     go = () => openSyllabus(t.sid);
+  } else if (t.src === 'todo') {
+    const n = todo.notes.find((x) => x.id === t.id);
+    have = (n && n.doneAt) || (pet.day.doneTasks || []).includes(t.id) ? 1 : 0;
+    go = () => showTodoNote(t.id);
   } else {
     // Ticked off here, or gone from Todoist's due list since it was picked (done in the Todoist app).
     const gone = cal.todoistOn && cal.todoistAt > t.at && !todoistDueNow().some((x) => x.id === t.id);
     have = (pet.day.doneTasks || []).includes(t.id) || gone ? 1 : 0;
     go = () => { const x = cal.todoist.find((y) => y.id === t.id); if (x) cal.sel = x.allDay ? x.date : ymd(new Date(x.at)); showView('calendar'); };
   }
-  return { id: 'task', text: t.text, have, goal: 1, coins: 30, go, hint: t.src === 'todoist' ? 'From Todoist' : 'From your syllabus' };
+  return { id: 'task', text: t.text, have, goal: 1, coins: 30, go, hint: { todoist: 'From Todoist', todo: 'From your To-do board' }[t.src] || 'From your syllabus' };
 }
 on('taskDone', (d) => {
   ensureDay();
@@ -571,6 +578,7 @@ $('#pet-name').addEventListener('change', () => { pet.name = $('#pet-name').valu
 on('view', (v) => { if (v === 'pet') renderPetView(); buddyTick(); });
 on('subjects', renderPetView);
 on('todoist', renderPetView);
+on('todo', renderPetView);
 $('#buddy-think').addEventListener('click', () => showView('pet'));
 on('settings', buddyTick);
 api.pet.onOpen(() => showView('pet'));
