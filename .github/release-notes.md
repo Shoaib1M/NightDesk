@@ -1,3 +1,7 @@
+## What's new in 1.0.8
+
+- **Fix:** spaces and numbers can be typed in post-its and board notes again (they were being taken as keyboard shortcuts).
+
 ## What's new in 1.0.7
 
 - **To-do tab:** a jamboard of post-it notes. Starts as a To do → Scheduled → In progress → Done pipeline, but the sections are yours to add, rename, move, resize and recolour. Drag notes between them, give them due dates (shown in the calendar and as a pet quest), and finishing one in a Done section earns your pet 5 coins.

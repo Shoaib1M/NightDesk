@@ -35,6 +35,10 @@
   const ta = node(n1.id).querySelector('textarea');
   ta.value = 'Revise OS paging'; ta.dispatchEvent(new Event('input'));
   check('typing saves the text', saved().notes[0].text === 'Revise OS paging');
+  ta.focus();
+  const typeKey = (k) => { const ev = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }); ta.dispatchEvent(ev); return ev; };
+  check('Space types a space in a post-it (it is not taken by the timer shortcut)', !typeKey(' ').defaultPrevented);
+  check('number keys type numbers, not switch tabs', (() => { typeKey('1'); typeKey('5'); return settings.view === 'todo'; })(), settings.view);
   check('short text is big, long text gets smaller', parseInt(ta.style.fontSize) === 22 && fontFor('x'.repeat(200)) === 13);
   ta.blur();
   $$('#todo-add .todo-sw')[3].click();

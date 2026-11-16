@@ -29,6 +29,7 @@
   const t1 = addText({ x: 100, y: 120 }, 'Ideas for the zebra project');
   check('a sticky note is added and focused', bd.board.items.length === 1 && document.activeElement === $(`[data-id="${t1.id}"] textarea`));
   const ta = $(`[data-id="${t1.id}"] textarea`);
+  check('Space and numbers type normally in a board note', (() => { const k = (key) => { const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }); ta.dispatchEvent(ev); return ev; }; return !k(' ').defaultPrevented && (k('2'), settings.view === 'notes'); })(), settings.view);
   ta.value = 'Ideas for the zebra project, round two'; ta.dispatchEvent(new Event('input'));
   await wait(400);
   check('typing in a note saves it', saved().find((n) => n.id === bd.id).board.items[0].text.includes('round two'));

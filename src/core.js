@@ -314,7 +314,8 @@ addEventListener('keydown', (e) => {
     else if (api) api.app.fullscreen(false);
     return;
   }
-  if ((e.target.matches && e.target.matches('input, button, select, [contenteditable]')) || e.ctrlKey || e.altKey || e.metaKey || !$('#modal').hidden) return;
+  // Never while typing: text boxes (post-its and board notes are textareas), pages, menus.
+  if ((e.target.matches && (e.target.matches('input, textarea, button, select, [contenteditable]') || e.target.isContentEditable)) || e.ctrlKey || e.altKey || e.metaKey || !$('#modal').hidden) return;
   // 1-9 open the tabs in the order shown in the dock.
   if (/^[1-9]$/.test(e.key) && +e.key <= shownViews().length) showView(shownViews()[+e.key - 1][0]);
   if (e.key === ' ') { e.preventDefault(); emit('space', settings.view); }
