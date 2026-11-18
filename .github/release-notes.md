@@ -1,3 +1,7 @@
+## What's new in 1.0.9
+
+- **Timer wheels:** set the timer with iPhone-style hours / minutes / seconds wheels, up to 23 h 59 min. New presets for 1 h, 1 h 30, 2 h and 3 h, and it shows when the timer will end.
+
 ## What's new in 1.0.8
 
 - **Fix:** spaces and numbers can be typed in post-its and board notes again (they were being taken as keyboard shortcuts).

@@ -72,14 +72,15 @@
 
   <section class="view pad" id="v-timer">
     <div class="center-col">
-      <div class="bigtime" id="t-time">25:00</div>
-      <div class="bar"><i id="t-bar"></i></div>
-      <div class="chips" id="t-chips"></div>
-      <div class="row">
-        <label class="fld">Min <input type="number" id="t-min" min="0" max="999" value="25"></label>
-        <label class="fld">Sec <input type="number" id="t-sec" min="0" max="59" value="0"></label>
-        <button class="btn" id="t-set">Set</button>
+      <div class="t-pick" id="t-pick">
+        <div class="wheel t-wheel" id="t-wheel" aria-label="Timer length"></div>
+        <div class="al-in" id="t-ends"></div>
       </div>
+      <div class="t-run" id="t-run" hidden>
+        <div class="bigtime" id="t-time">25:00</div>
+        <div class="bar"><i id="t-bar"></i></div>
+      </div>
+      <div class="chips" id="t-chips"></div>
       <div class="row">
         <button class="btn pri big" id="t-go">Start</button>
         <button class="btn big" id="t-reset">Reset</button>

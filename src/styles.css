@@ -178,6 +178,13 @@ main { position: fixed; inset: 0; }
 .wheel-item { position: absolute; left: 0; right: 0; top: 50%; height: 40px; margin-top: -20px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--muted); backface-visibility: hidden; }
 .wheel-item.mid { color: var(--text); font-weight: 400; }
 .wheel-col.fixed .wheel-item { font-size: 18px; }
+.t-pick { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.t-run { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; }
+.t-wheel { height: 230px; padding: 0 16px; }
+.t-wheel .wheel-col { width: 76px; }
+.t-wheel .wheel-item { font-size: 32px; }
+.t-unit { position: relative; align-self: center; width: 52px; margin-left: -8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.chip-btn.on { border-color: var(--accent); color: var(--accent); }
 .wheel-colon { position: relative; font-size: 26px; font-weight: 300; color: var(--text); margin: 0 -4px; padding-bottom: 3px; }
 .days { display: flex; gap: 4px; }
 .days button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--card2); cursor: pointer; font-size: 12px; color: var(--muted); padding: 0; }

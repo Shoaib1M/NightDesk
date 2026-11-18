@@ -163,38 +163,82 @@ on('settings', () => { if (!pomo.running && pomo.left === pomo.dur) pomoSet(pomo
 on('view', (v) => { if (v === 'focus') renderPomo(); });
 
 // ---------- countdown timer
-const tm = { total: 25 * 60000, left: 25 * 60000, running: false, endAt: 0 };
+// Set with iPhone-style hours / minutes / seconds wheels (up to 23 h 59 min 59 s) or a preset.
+// While it is set but not started the wheels show; once started, the big countdown does.
+const tm = { total: store.get('timerLen', 25 * 60000), left: 0, running: false, endAt: 0, done: false };
+tm.left = tm.total;
+const TIMER_MAX = (23 * 3600 + 59 * 60 + 59) * 1000;
+const TIMER_PRESETS = [[1, '1 min'], [5, '5 min'], [10, '10 min'], [15, '15 min'], [25, '25 min'], [45, '45 min'], [60, '1 h'], [90, '1 h 30'], [120, '2 h'], [180, '3 h']];
+let timerWheels = null;
+const timerIdle = () => !tm.started; // set, not yet started (or reset)
 function renderTimer() {
+  const idle = timerIdle();
+  $('#t-pick').hidden = !idle;
+  $('#t-run').hidden = idle;
   $('#t-time').textContent = fmtMs(tm.left);
   $('#t-bar').style.width = (tm.total ? (1 - Math.max(0, tm.left) / tm.total) * 100 : 0) + '%';
-  $('#t-go').textContent = tm.running ? 'Pause' : tm.left < tm.total && tm.left > 0 ? 'Resume' : 'Start';
+  $('#t-go').textContent = tm.running ? 'Pause' : tm.started && !tm.done ? 'Resume' : 'Start';
+  $('#t-go').disabled = idle && !tm.total;
+  $('#t-reset').textContent = idle ? 'Clear' : 'Reset';
+  $$('#t-chips .chip-btn').forEach((b) => b.classList.toggle('on', idle && +b.dataset.ms === tm.total));
+  if (idle) {
+    const end = new Date(Date.now() + tm.total);
+    $('#t-ends').textContent = tm.total ? `Ends at ${fmtTime(end)}${ymd(end) !== ymd(new Date()) ? ' tomorrow' : ''}` : 'Spin the wheels to set a time';
+  }
 }
-function timerSet(ms) {
-  if (!(ms > 0)) return;
-  tm.total = tm.left = ms; tm.running = false;
+// Moves the wheels to a length (without them reporting back).
+function timerWheelsTo(ms) {
+  if (!timerWheels) return;
+  const s = Math.round(ms / 1000);
+  timerWheels.h.set(Math.floor(s / 3600), true); timerWheels.m.set(Math.floor((s % 3600) / 60), true); timerWheels.s.set(s % 60, true);
+}
+// Zero is only allowed from the wheels or the Clear button; anything else non-positive is ignored.
+function timerSet(ms, fromWheels, clear) {
+  if (!(+ms > 0) && !fromWheels && !clear) return;
+  ms = Math.max(0, Math.min(TIMER_MAX, Math.round((+ms || 0) / 1000) * 1000));
+  tm.total = tm.left = ms; tm.running = false; tm.done = false; tm.started = false;
+  store.set('timerLen', ms);
   $('#t-time').classList.remove('done');
+  if (!fromWheels) timerWheelsTo(ms);
   renderTimer();
 }
+function buildTimerWheels() {
+  const nums = (n) => Array.from({ length: n }, (_, i) => String(i));
+  const changed = () => timerSet((timerWheels.h.get() * 3600 + timerWheels.m.get() * 60 + timerWheels.s.get()) * 1000, true);
+  timerWheels = {
+    h: wheel({ items: nums(24), label: 'Hours', onChange: changed }),
+    m: wheel({ items: nums(60), label: 'Minutes', onChange: changed }),
+    s: wheel({ items: nums(60), label: 'Seconds', onChange: changed }),
+  };
+  const unit = (t) => h('div', { class: 't-unit' }, t);
+  $('#t-wheel').replaceChildren(timerWheels.h.el, unit('hours'), timerWheels.m.el, unit('min'), timerWheels.s.el, unit('sec'));
+  timerWheelsTo(tm.total);
+}
 function timerToggle() {
+  if (!tm.total) return;
   if (tm.running) { tm.left = tm.endAt - Date.now(); tm.running = false; }
-  else { if (tm.left <= 0) tm.left = tm.total; tm.endAt = Date.now() + tm.left; tm.running = true; $('#t-time').classList.remove('done'); }
+  else { if (tm.left <= 0) tm.left = tm.total; tm.done = false; tm.started = true; tm.endAt = Date.now() + tm.left; tm.running = true; $('#t-time').classList.remove('done'); }
   renderTimer();
 }
 function tickTimer() {
   if (!tm.running) return;
   tm.left = tm.endAt - Date.now();
   if (tm.left <= 0) {
-    tm.left = 0; tm.running = false;
+    tm.left = 0; tm.running = false; tm.done = true;
     $('#t-time').classList.add('done');
     chime(); setTimeout(chime, 1200);
     notify('Timer finished', `${fmtDur(tm.total / 60000)} is up.`);
   }
   renderTimer();
 }
-$('#t-chips').append(...[1, 5, 10, 15, 25, 45, 60].map((m) => h('button', { class: 'chip-btn', onclick: () => timerSet(m * 60000) }, `${m} min`)));
-$('#t-set').addEventListener('click', () => timerSet(((+$('#t-min').value || 0) * 60 + (+$('#t-sec').value || 0)) * 1000));
+$('#t-chips').append(...TIMER_PRESETS.map(([m, label]) => h('button', { class: 'chip-btn', 'data-ms': m * 60000, onclick: () => timerSet(m * 60000) }, label)));
 $('#t-go').addEventListener('click', timerToggle);
-$('#t-reset').addEventListener('click', () => timerSet(tm.total));
+// Reset goes back to the set length (and the wheels); on the wheels, Clear sets them to zero.
+$('#t-reset').addEventListener('click', () => timerSet(timerIdle() ? 0 : tm.total, false, true));
+buildTimerWheels();
+renderTimer();
+setInterval(() => { if (timerIdle() && $('#v-timer').classList.contains('on')) renderTimer(); }, 20000); // keep "Ends at" current
+on('view', (v) => { if (v === 'timer') { if (timerWheels) Object.values(timerWheels).forEach((w) => w.finish()); renderTimer(); } });
 
 // ---------- stopwatch
 const sw = { running: false, startAt: 0, acc: 0, laps: [] };
