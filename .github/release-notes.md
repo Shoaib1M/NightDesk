@@ -1,3 +1,7 @@
+## What's new in 1.0.10
+
+- **Fix:** clicking the desktop pet could fall through to whatever was behind it, when the pet had walked or appeared under a mouse that wasn't moving. If that was the "Live on my desktop" switch, the pet kept jumping between the desktop and the app. The pet now notices the mouse even when it's still.
+
 ## What's new in 1.0.9
 
 - **Timer wheels:** set the timer with iPhone-style hours / minutes / seconds wheels, up to 23 h 59 min. New presets for 1 h, 1 h 30, 2 h and 3 h, and it shows when the timer will end.

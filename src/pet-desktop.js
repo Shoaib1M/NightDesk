@@ -68,6 +68,8 @@ function onThink(x, y) {
   return x >= r.left - 2 && x < r.right + 2 && y >= r.top - 2 && y < r.bottom + 2;
 }
 addEventListener('mousemove', (e) => setHit(!!drag || onPet(e.clientX, e.clientY) || onThink(e.clientX, e.clientY)));
+// The same check, driven by the main process every 50 ms, so a still cursor is noticed too.
+window.api.pet.onCursor((p) => setHit(!!drag || onPet(p.x, p.y) || onThink(p.x, p.y)));
 window.__thinkAt = onThink; // tests
 document.addEventListener('mouseleave', () => { if (!drag) setHit(false); });
 window.__petHitAt = onPet; // tests

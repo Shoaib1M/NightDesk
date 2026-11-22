@@ -46,6 +46,20 @@
   s = await t('info');
   check('size stays fixed after moving on every monitor', Math.abs(s.bounds.width - 260) <= 1 && Math.abs(s.bounds.height - 260) <= 1, s.bounds);
 
+  // A pet that turns up under a cursor that is not moving must still catch the click (it used to let
+  // it fall through to the window behind: in a friend's video, the "Live on my desktop" switch, so
+  // every click on the pet switched desktop mode off and on).
+  await t('place', 0); await wait(300);
+  s = await t('under'); await wait(400);
+  let hitInfo = await t('info');
+  for (let k = 0; k < 5 && !hitInfo.hit; k++) { await wait(150); hitInfo = await t('info'); }
+  const cursorStill = Math.abs(hitInfo.cursor.x - s.cursor.x) <= 2 && Math.abs(hitInfo.cursor.y - s.cursor.y) <= 2;
+  check('a pet that appears under a still cursor takes the click', hitInfo.hit || !cursorStill, { hitInfo, s, cursorStill });
+  await t('place', 0); await wait(400);
+  s = await t('info');
+  const away = s.cursor.x < s.bounds.x || s.cursor.x >= s.bounds.x + s.bounds.width || s.cursor.y < s.bounds.y || s.cursor.y >= s.bounds.y + s.bounds.height;
+  check('when it moves away, clicks pass through again', !s.hit || !away, s);
+
   // roaming on the desktop triggers walks when idle
   pet.roam = true; buddy.nextAct = 0; pomo.running = false; buddy.cheerUntil = 0; pet.napUntil = 0;
   pet.hunger = 80; pet.energy = 80; pet.joy = 80;

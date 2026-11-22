@@ -259,7 +259,7 @@ function petStartPosition() {
 }
 
 function setDesktopPet(on) {
-  if (!on) { stopPetWalk(); stopPetDrag(); if (petWin && !petWin.isDestroyed()) petWin.destroy(); petWin = null; return false; }
+  if (!on) { stopPetWalk(); stopPetDrag(); clearInterval(petHitTimer); petHitTimer = null; if (petWin && !petWin.isDestroyed()) petWin.destroy(); petWin = null; return false; }
   if (petWin && !petWin.isDestroyed()) return true;
   petWin = new BrowserWindow({
     ...PET_SIZE, ...petStartPosition(),
@@ -280,7 +280,19 @@ function setDesktopPet(on) {
     if (lastPetState) petWin.webContents.send('pet:state', lastPetState);
     if (!SHOTS) petWin.showInactive();
   });
-  petWin.on('closed', () => { petWin = null; });
+  petWin.on('closed', () => { petWin = null; clearInterval(petHitTimer); petHitTimer = null; });
+  // The page only hears about the mouse when it moves. A pet that appears, walks or bobs under a
+  // still cursor would not know it is under it, and a click would fall through to whatever is
+  // behind (in a video from a friend: the "Live on my desktop" switch, which turned the desktop pet
+  // off and on with every click). So the cursor is checked here, every 50 ms, moving or not.
+  clearInterval(petHitTimer);
+  petHitTimer = setInterval(() => {
+    if (!petAlive()) return;
+    const p = screen.getCursorScreenPoint(), b = petWin.getBounds();
+    const inside = p.x >= b.x && p.x < b.x + b.width && p.y >= b.y && p.y < b.y + b.height;
+    if (inside) petWin.webContents.send('pet:cursor', { x: p.x - b.x, y: p.y - b.y });
+    else if (petHit && !petDragTimer) { petHit = false; petWin.setIgnoreMouseEvents(true, { forward: true }); }
+  }, 50);
   petWin.once('show', () => movePet(...petWin.getPosition()));
   // Catch any rescale Windows applies on its own (for example after a display change).
   petWin.on('resize', () => {
@@ -294,6 +306,7 @@ function setDesktopPet(on) {
 // across monitors with different scaling, where positions reported by the page are unreliable.
 let petDragTimer = null;
 let petWalkTimer = null;
+let petHitTimer = null;
 let petWalks = 0; // walk requests, for tests
 const petAlive = () => petWin && !petWin.isDestroyed();
 
@@ -371,10 +384,16 @@ function registerPetIpc() {
   });
   // Dev only (screenshot / test mode): read and place the pet window.
   if (SHOTS) {
-    handle('pet:test', (cmd, arg) => {
+    handle('pet:test', async (cmd, arg) => {
       if (!petAlive()) return null;
       const displays = screen.getAllDisplays();
       if (cmd === 'place') { const a = displays[Math.min(arg, displays.length - 1)].workArea; movePet(a.x + 40, a.y + a.height - PET_SIZE.height); }
+      // Move the window so the middle of the pet sits under the cursor, without the mouse moving.
+      if (cmd === 'under') {
+        const c = await petWin.webContents.executeJavaScript("(() => { const r = document.getElementById('cv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()");
+        const p = screen.getCursorScreenPoint();
+        movePet(p.x - c.x, p.y - c.y);
+      }
       if (cmd === 'dragStart') startPetDrag();
       if (cmd === 'dragEnd') stopPetDrag();
       const b = petWin.getBounds(), d = screen.getDisplayMatching(b);
