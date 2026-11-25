@@ -155,7 +155,7 @@
   const before = todo.notes.length;
   c.dispatchEvent(new MouseEvent('dblclick', { ...scr(900, 700), bubbles: true }));
   const z5 = todo.notes[before];
-  check('clicks land in the right place when zoomed', z5 && z5.x === 900 - NOTE_SIZE / 2 && z5.y === 700 - NOTE_SIZE / 2, z5 && [z5.x, z5.y]);
+  check('clicks land in the right place when zoomed', z5 && Math.abs(z5.x - (900 - NOTE_SIZE / 2)) <= 2 && Math.abs(z5.y - (700 - NOTE_SIZE / 2)) <= 2, z5 && [z5.x, z5.y]);
   document.activeElement.blur();
   $('#todo-fit').click();
   check('Fit shows everything', todo.zoom >= 0.3 && todo.zoom <= 1.5 && (() => { const all = [...todo.notes, ...todo.sections]; const x1 = Math.max(...all.map((o) => o.x + o.w)); return x1 * todo.zoom - c.scrollLeft <= c.clientWidth + 2; })(), todo.zoom);

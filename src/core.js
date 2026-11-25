@@ -115,6 +115,10 @@ const settings = Object.assign({
   focusMin: 50, breakMin: 10, longMin: 20, longEvery: 4, autoStart: true,
   cfHandle: '', ghUser: '', cfRemind: true, cfInCalendar: true, snoozeMin: 9, view: 'clock',
   hiddenTabs: [], heatGh: true, heatCf: true,
+  // screen time: daily limits in minutes ({ total | cat:<id> | app:<name>: min }), break reminder
+  // after this many minutes of unbroken screen use (0 off), bedtime 'HH:MM' ('' off), apps moved to
+  // another category, apps not tracked.
+  scrLimits: {}, scrBreak: 60, scrBed: '', scrCats: {}, scrIgnore: [],
 }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 
@@ -699,6 +703,10 @@ window.__shot = (step) => {
     if (part === 'light' || part === 'dark') { settings.theme = part; applyTheme(); }
     else if (part === 'settings') openSettings();
     else if (part === 'screendemo') { screenDemo(); renderScreen(); }
+    else if (part === 'scrlimits') screenDemoLimits();
+    else if (part === 'scrweek') { scr.mode = 'week'; renderScreen(); }
+    else if (part === 'scrpanel') setTimeout(openScreenPanel, 300);
+    else if (part === 'scrmenu') setTimeout(() => { const b = $('#scr-apps .app'); if (b) b.click(); }, 300);
     else if (part === 'fills') { const t = new Date(); [['yellow', 0], ['pink', 2], ['mint', 3], ['sky', 6], ['lilac', 9], ['peach', 11], ['yellow', 13]].forEach(([c, n]) => { const all = dayFills(); all[ymd(addDays(t, n))] = c; store.set('dayFills', all); }); saveEvent({ title: 'Codeforces practice', allDay: true, start: ymd(t), end: ymd(addDays(t, 1)) }, null).then(renderCal); }
     else if (part === 'datasec') setTimeout(() => showSettingsPage('data'), 900);
     else if (part.startsWith('spage=')) setTimeout(() => showSettingsPage(part.slice(6)), 900);

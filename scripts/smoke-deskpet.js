@@ -54,7 +54,8 @@
   let hitInfo = await t('info');
   for (let k = 0; k < 5 && !hitInfo.hit; k++) { await wait(150); hitInfo = await t('info'); }
   const cursorStill = Math.abs(hitInfo.cursor.x - s.cursor.x) <= 2 && Math.abs(hitInfo.cursor.y - s.cursor.y) <= 2;
-  check('a pet that appears under a still cursor takes the click', hitInfo.hit || !cursorStill, { hitInfo, s, cursorStill });
+  // (skipped when the mouse is on the main screen: tests stay off it while someone works there)
+  check('a pet that appears under a still cursor takes the click', s.skipped || hitInfo.hit || !cursorStill, { hitInfo, s, cursorStill });
   await t('place', 0); await wait(400);
   s = await t('info');
   const away = s.cursor.x < s.bounds.x || s.cursor.x >= s.bounds.x + s.bounds.width || s.cursor.y < s.bounds.y || s.cursor.y >= s.bounds.y + s.bounds.height;

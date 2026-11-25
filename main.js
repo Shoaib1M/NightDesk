@@ -98,9 +98,21 @@ function syncLoginItem() {
   try { app.setLoginItemSettings({ openAtLogin: prefs.startAtLogin !== false }); } catch (err) { console.error(err); }
 }
 
+// Test and screenshot runs keep off the main screen when there is a second one (someone may be
+// working there). NIGHTDESK_MAIN=1 allows the main screen too.
+function testDisplays() {
+  const all = screen.getAllDisplays(), main = screen.getPrimaryDisplay().id;
+  const side = all.filter((d) => d.id !== main);
+  return process.env.NIGHTDESK_MAIN || !side.length ? all : side;
+}
+
 function savedBounds() {
   const b = prefs.bounds;
-  if (!b || SHOTS) return {};
+  if (SHOTS) {
+    const a = testDisplays()[0].workArea, w = Math.min(1280, a.width), hgt = Math.min(800, a.height);
+    return { x: Math.round(a.x + (a.width - w) / 2), y: Math.round(a.y + (a.height - hgt) / 2), width: w, height: hgt };
+  }
+  if (!b) return {};
   const onScreen = screen.getAllDisplays().some((d) => {
     const a = d.workArea;
     return b.x < a.x + a.width - 80 && b.x + b.width > a.x + 80 && b.y < a.y + a.height - 80 && b.y + b.height > a.y;
@@ -253,8 +265,8 @@ function petStartPosition() {
     const a = d.workArea;
     return p.x > a.x - 200 && p.x < a.x + a.width - 40 && p.y > a.y - 200 && p.y < a.y + a.height - 40;
   });
-  if (fits) return p;
-  const a = screen.getPrimaryDisplay().workArea;
+  if (fits && !SHOTS) return p;
+  const a = (SHOTS ? testDisplays()[0] : screen.getPrimaryDisplay()).workArea;
   return { x: a.x + a.width - PET_SIZE.width - 20, y: a.y + a.height - PET_SIZE.height };
 }
 
@@ -386,18 +398,23 @@ function registerPetIpc() {
   if (SHOTS) {
     handle('pet:test', async (cmd, arg) => {
       if (!petAlive()) return null;
-      const displays = screen.getAllDisplays();
+      const displays = testDisplays();
       if (cmd === 'place') { const a = displays[Math.min(arg, displays.length - 1)].workArea; movePet(a.x + 40, a.y + a.height - PET_SIZE.height); }
-      // Move the window so the middle of the pet sits under the cursor, without the mouse moving.
+      // Move the window so the middle of the pet sits under the cursor, without the mouse moving
+      // (only when the cursor is on a screen the tests may use).
+      let skipped = false;
       if (cmd === 'under') {
-        const c = await petWin.webContents.executeJavaScript("(() => { const r = document.getElementById('cv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()");
-        const p = screen.getCursorScreenPoint();
-        movePet(p.x - c.x, p.y - c.y);
+        const p = screen.getCursorScreenPoint(), on = screen.getDisplayNearestPoint(p);
+        if (!displays.some((d) => d.id === on.id)) skipped = true;
+        else {
+          const c = await petWin.webContents.executeJavaScript("(() => { const r = document.getElementById('cv').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()");
+          movePet(p.x - c.x, p.y - c.y);
+        }
       }
       if (cmd === 'dragStart') startPetDrag();
       if (cmd === 'dragEnd') stopPetDrag();
       const b = petWin.getBounds(), d = screen.getDisplayMatching(b);
-      return { hit: petHit, bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null, cursor: screen.getCursorScreenPoint() };
+      return { skipped, hit: petHit, bounds: b, display: displays.findIndex((x) => x.id === d.id), displays: displays.length, area: d.workArea, dragging: !!petDragTimer, walking: !!petWalkTimer, walks: petWalks, saved: prefs.petPos || null, cursor: screen.getCursorScreenPoint() };
     });
   }
 }

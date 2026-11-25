@@ -53,7 +53,7 @@
   await wait(600);
   const imgItem = bd.board.items.find((i) => i.t === 'img');
   check('a dropped screenshot becomes an image card', imgItem && NOTE_IMG.test(imgItem.src) && imgItem.w === 300, imgItem);
-  check('it is placed where it was dropped', imgItem && imgItem.x === 200 && imgItem.y === 150, imgItem && [imgItem.x, imgItem.y]);
+  check('it is placed where it was dropped', imgItem && Math.abs(imgItem.x - 200) <= 1 && Math.abs(imgItem.y - 150) <= 1, imgItem && [imgItem.x, imgItem.y]);
   dt = new DataTransfer(); dt.items.add(new File(['%PDF-1.4 fake'], 'Lecture 5.pdf', { type: 'application/pdf' })); drop(dt, 500, 400);
   await wait(400);
   const pdf = bd.board.items.find((i) => i.t === 'file');

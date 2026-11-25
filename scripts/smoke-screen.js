@@ -57,6 +57,99 @@
   const right = $('.scr-right'), left = $('.scr-left');
   check('everything fits without scrolling', right.scrollHeight <= right.clientHeight + 1 && left.scrollHeight <= left.clientHeight + 1, { r: [right.scrollHeight, right.clientHeight], l: [left.scrollHeight, left.clientHeight] });
 
+  // ----- your own categories, apps not tracked
+  settings.scrCats = { YouTube: 'work' };
+  check('an app you moved gets your category', c('chrome', 'Lecture - YouTube - Google Chrome').cat === 'work', c('chrome', 'Lecture - YouTube - Google Chrome'));
+  settings.scrCats = {};
+  const raw = { ...emptyDay(), total: 600000, apps: { YouTube: 400000, Blender: 200000 }, appCat: { YouTube: 'watch', Blender: 'other' }, cats: { watch: 400000, other: 200000 },
+    hours: { 10: { watch: 400000, other: 200000 } }, ha: { 10: { YouTube: 400000, Blender: 200000 } } };
+  settings.scrCats = { YouTube: 'work' }; settings.scrIgnore = ['Blender'];
+  let v = scrView(raw);
+  check('moving an app re-colours past days and the hour chart', v.cats.work === 400000 && !v.cats.watch && v.hours[10].work === 400000, v);
+  check('an untracked app is left out of totals', v.total === 400000 && !v.apps.Blender && !v.hours[10].other, v);
+  scr.cur = null;
+  screenOnWindow({ fake: true, proc: 'blender', title: 'Untitled' });
+  check('an untracked app is not counted', scr.cur === null, scr.cur);
+  settings.scrCats = {}; settings.scrIgnore = [];
+  check('videos and calls keep counting when you sit still', keepsCounting({ app: 'YouTube', cat: 'watch' }) && keepsCounting({ app: 'Zoom', cat: 'chat' }) && !keepsCounting({ app: 'VS Code', cat: 'work' }), null);
+
+  // ----- daily limits, breaks, bedtime
+  const bubble = () => $('#buddy-say').hidden ? '' : $('#buddy-say').textContent;
+  settings.buddy = true; pomo.running = false;
+  store.set('screen-' + today, {}); $('#buddy-say').hidden = true;
+  settings.scrBreak = 0; settings.scrBed = '';
+  settings.scrLimits = { 'app:YouTube': 20 };
+  screenOnWindow({ fake: true, proc: 'chrome', title: 'x - YouTube - Google Chrome' });
+  let dd = screenDay(today); dd.apps.YouTube = 10.5 * 60000; dd.appCat.YouTube = 'watch'; dd.total = dd.apps.YouTube; store.set('screen-' + today, dd);
+  scr.since = Date.now() - 60000; screenAdd();
+  check('10 minutes before a limit the pet warns you', screenDay(today).flags['app:YouTube'] === 'warn' && /10 minutes of YouTube left/.test(bubble()), { f: screenDay(today).flags, b: bubble() });
+  dd = screenDay(today); dd.apps.YouTube = 19.5 * 60000; store.set('screen-' + today, dd);
+  scr.since = Date.now() - 60000; screenAdd();
+  check('reaching a limit: the pet tells you', screenDay(today).flags['app:YouTube'] === 'over' && /20m of YouTube/.test(bubble()), { f: screenDay(today).flags, b: bubble() });
+  $('#buddy-say').hidden = true;
+  scr.since = Date.now() - 60000; screenAdd();
+  check('and only once a day', bubble() === '', bubble());
+  settings.scrLimits = { 'cat:social': 1 };
+  dd = screenDay(today); dd.apps.Instagram = 5 * 60000; dd.appCat.Instagram = 'social'; store.set('screen-' + today, dd);
+  scr.since = Date.now() - 60000; screenAdd();
+  check('a limit you are not using right now stays quiet', screenDay(today).flags['cat:social'] === 'over' && bubble() === '', { f: screenDay(today).flags, b: bubble() });
+  setLimit('cat:social', 0);
+  check('removing a limit', !('cat:social' in settings.scrLimits), settings.scrLimits);
+  settings.scrLimits = {};
+  settings.scrBreak = 1; scr.cont = 0;
+  scr.since = Date.now() - 70000; screenAdd();
+  check('a break reminder after unbroken screen time', /20 seconds/.test(bubble()) && scr.cont === 0, { b: bubble(), cont: scr.cont });
+  $('#buddy-say').hidden = true; pomo.running = true; scr.cont = 0;
+  scr.since = Date.now() - 70000; screenAdd(); pomo.running = false;
+  check('no break reminder during a focus block', bubble() === '', bubble());
+  settings.scrBreak = 60;
+  const at = (hh, mm) => new Date(2026, 0, 5, hh, mm);
+  settings.scrBed = '23:00';
+  check('bedtime 11 pm: 11:30 pm and 2 am are late, 6 am and 10 pm are not', isLate(at(23, 30)) && isLate(at(2, 0)) && !isLate(at(6, 0)) && !isLate(at(22, 0)), null);
+  settings.scrBed = '01:00';
+  check('bedtime 1 am: 12:30 am is not late, 1:30 am is', !isLate(at(0, 30)) && isLate(at(1, 30)), null);
+  settings.scrBed = '';
+  check('no bedtime: nothing is late', !isLate(at(2, 0)), null);
+
+  // ----- the page again: week view, app menu, limits panel
+  screenDemo(); settings.scrLimits = { total: 420, 'cat:watch': 45 }; settings.scrBed = '23:00';
+  showView('screen'); renderScreen();
+  check('limits show with a bar each', $$('#scr-limits .lim').length === 2, $('#scr-limits').textContent);
+  check('late hours are marked', $$('#scr-hours .col.late').length === 6, $$('#scr-hours .col.late').length);
+  check('still fits without scrolling with limits', left.scrollHeight <= left.clientHeight + 1 && right.scrollHeight <= right.clientHeight + 1, { l: [left.scrollHeight, left.clientHeight], r: [right.scrollHeight, right.clientHeight] });
+  $('#scr-all').click();
+  check('All shows every app', $$('#scr-apps .app').length === Object.keys(scrView(screenDay(today)).apps).length && $$('#scr-apps .app').length > 6, $$('#scr-apps .app').length);
+  $('#scr-all').click();
+  $('#scr-mode [data-mode=week]').click();
+  check('week view: totals for seven days', $('#scr-day').textContent === 'This week' && /This week/.test($('#scr-kpis').textContent) && /vs the week before/.test($('#scr-kpis').textContent), $('#scr-kpis').textContent);
+  const weekSum = [...Array(7)].reduce((a, _, i) => a + scrView(screenDay(ymd(addDays(new Date(), -i)))).total, 0);
+  check('the week donut adds up all seven days', $('#scr-donut .d-total').textContent === fmtH(weekSum), { shown: $('#scr-donut .d-total').textContent, want: fmtH(weekSum) });
+  check('the weekly report compares with the week before', /than the week before/.test($('#scr-insight').textContent), $('#scr-insight').textContent);
+  $('#scr-prev').click();
+  check('previous goes back a whole week', scr.dayView === 7 && /–/.test($('#scr-day').textContent), { dv: scr.dayView, t: $('#scr-day').textContent });
+  $$('#scr-week .col')[2].click();
+  check('clicking a day opens that day', scr.mode === 'day' && scr.dayView === 11, { m: scr.mode, dv: scr.dayView });
+  $('#scr-pick').value = today; $('#scr-pick').dispatchEvent(new Event('change'));
+  const firstApp = $('#scr-apps .app .nm').textContent;
+  $('#scr-apps .app').click();
+  check('clicking an app opens its menu', !$('#scr-menu').hidden && $$('#scr-menu button').length === 9, $('#scr-menu').textContent);
+  [...$$('#scr-menu button')].find((b) => b.textContent.startsWith('Entertainment')).click();
+  check('moving it updates the day straight away', settings.scrCats[firstApp] === 'watch' && $('#scr-menu').hidden && pct(scrView(screenDay(today)).cats.watch, 1) > 0, settings.scrCats);
+  [...$$('#scr-apps .app')].find((b) => b.textContent.startsWith(firstApp)).click();
+  [...$$('#scr-menu button')].find((b) => b.textContent.startsWith('Study & work')).click();
+  check('moving it back to its usual category forgets the change', !(firstApp in settings.scrCats), settings.scrCats);
+  $('#scr-gear').click();
+  check('the gear opens limits and reminders', !$('#scr-panel').hidden && $$('#scr-panel .lrow input[type=number]').length === 3, $('#scr-panel').textContent.slice(0, 120));
+  const add = $('#scr-panel select'); add.value = 'cat:games'; add.dispatchEvent(new Event('change'));
+  check('adding a limit from the panel', settings.scrLimits['cat:games'] === 60 && $$('#scr-limits .lim').length === 3, settings.scrLimits);
+  $$('#scr-panel .lrow')[0].querySelector('.ib').click();
+  check('removing one from the panel', !('total' in settings.scrLimits), settings.scrLimits);
+  const n = $('#scr-panel input[aria-label="Break reminder minutes"]'); n.value = '45'; n.dispatchEvent(new Event('change'));
+  check('break reminder length is saved', settings.scrBreak === 45 && store.get('settings', {}).scrBreak === 45, settings.scrBreak);
+  document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+  check('clicking elsewhere closes the panel', $('#scr-panel').hidden, null);
+  settings.scrLimits = {}; settings.scrBed = ''; settings.scrBreak = 60; saveSettings(); scr.mode = 'day';
+
   // ----- history: any day, years back
   const old = ymd(addDays(new Date(), -3 * 365));
   store.set('screen-' + old, { total: 5400000, apps: { 'VS Code': 5400000 }, appCat: { 'VS Code': 'work' }, cats: { work: 5400000 }, hours: { 21: { work: 5400000 } }, switches: 12, longest: { app: 'VS Code', ms: 3600000 } });

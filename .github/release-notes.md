@@ -1,3 +1,13 @@
+## What's new in 1.0.11
+
+- **Screen time, much more:**
+  - **Daily limits** for all screen time, a category (say Entertainment) or one app. Your pet warns you 10 minutes before and tells you when you reach it.
+  - **Week view:** the whole week added up, compared with the week before, with your most focused day.
+  - **Click any app** to move it to another category (a lecture channel can count as Study) or to stop tracking it.
+  - **Break reminder** after an hour of unbroken screen time (look 20 feet away for 20 seconds), and an optional **bedtime** nudge, with late hours marked on the chart.
+  - **All apps** list, not just the top six.
+- **Fix:** videos and calls kept on screen without touching the mouse now still count (they stopped after 2 minutes).
+
 ## What's new in 1.0.10
 
 - **Fix:** clicking the desktop pet could fall through to whatever was behind it, when the pet had walked or appeared under a mouse that wasn't moving. If that was the "Live on my desktop" switch, the pet kept jumping between the desktop and the app. The pet now notices the mouse even when it's still.

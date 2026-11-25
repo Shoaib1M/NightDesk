@@ -185,7 +185,11 @@
     <div class="scr">
       <div class="card scr-left">
         <div class="scr-head">
-          <h1>Screen time</h1>
+          <div class="row scr-title">
+            <h1>Screen time</h1>
+            <div class="seg" id="scr-mode"><button data-mode="day" class="on">Day</button><button data-mode="week">Week</button></div>
+            <button class="ib" id="scr-gear" aria-label="Limits and reminders" title="Limits and reminders"></button>
+          </div>
           <div class="row">
             <button class="btn sm" id="scr-prev" aria-label="Previous day">&lsaquo;</button>
             <span id="scr-day" class="scr-dayname"></span>
@@ -195,18 +199,21 @@
         </div>
         <div id="scr-donut" class="scr-donut"></div>
         <div id="scr-legend" class="scr-legend"></div>
+        <div id="scr-limits" class="scr-limits"></div>
         <div id="scr-studied" class="scr-studied"></div>
         <p id="scr-insight" class="scr-insight"></p>
       </div>
       <div class="scr-right">
         <div class="kpis" id="scr-kpis"></div>
-        <div class="card grow"><h3>Your day <small>hour by hour</small></h3><div class="bars scr-hours" id="scr-hours"></div></div>
+        <div class="card grow"><h3 id="scr-hours-h">Your day <small>hour by hour</small></h3><div class="bars scr-hours" id="scr-hours"></div></div>
         <div class="two">
-          <div class="card"><h3>Top apps <small>and sites</small></h3><div id="scr-apps" class="scr-apps"></div></div>
-          <div class="card"><h3>Last 7 days <small>click a day</small></h3><div class="bars scr-week" id="scr-week"></div></div>
+          <div class="card"><h3>Top apps <small>click one to change its category</small><button class="link-btn" id="scr-all">All</button></h3><div id="scr-apps" class="scr-apps"></div></div>
+          <div class="card"><h3 id="scr-week-h">Last 7 days <small>click a day</small></h3><div class="bars scr-week" id="scr-week"></div></div>
         </div>
       </div>
+      <div class="pop-menu scr-menu" id="scr-menu" hidden></div>
     </div>
+    <div class="pop scr-panel" id="scr-panel" hidden></div>
   </section>
 
   <section class="view pad" id="v-calendar">
